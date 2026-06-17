@@ -94,6 +94,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:site", content: "@NoskyTech" },
+      { name: "twitter:title", content: "Nosky HomeOS — Smart Living. Seamlessly Connected." },
+      { name: "description", content: "Nosky HomeOS is a premium smart home web application for seamless control and management of your connected devices." },
+      { property: "og:description", content: "Nosky HomeOS is a premium smart home web application for seamless control and management of your connected devices." },
+      { name: "twitter:description", content: "Nosky HomeOS is a premium smart home web application for seamless control and management of your connected devices." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d4c0d4b9-a45a-42d5-a999-891790859b00/id-preview-719c9c6b--83f256ff-7191-4e3b-ad6a-03c7e8b37180.lovable.app-1781728408041.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/d4c0d4b9-a45a-42d5-a999-891790859b00/id-preview-719c9c6b--83f256ff-7191-4e3b-ad6a-03c7e8b37180.lovable.app-1781728408041.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
