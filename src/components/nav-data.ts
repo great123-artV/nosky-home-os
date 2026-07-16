@@ -5,6 +5,7 @@ import {
   BarChart3,
   Bell,
   Settings,
+  Zap,
 } from "lucide-react";
 
 export type NavItem = {
@@ -16,6 +17,7 @@ export type NavItem = {
 
 export const navItems: NavItem[] = [
   { title: "Dashboard", to: "/", icon: LayoutDashboard },
+  { title: "Smart Watt", to: "/smart-watt", icon: Zap },
   { title: "Rooms", to: "/rooms", icon: DoorOpen },
   { title: "Devices", to: "/devices", icon: Cpu },
   { title: "Analytics", to: "/analytics", icon: BarChart3 },
