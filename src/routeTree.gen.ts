@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SmartWattRouteImport } from './routes/smart-watt'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as RoomsRouteImport } from './routes/rooms'
@@ -17,6 +18,11 @@ import { Route as DevicesRouteImport } from './routes/devices'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as IndexRouteImport } from './routes/index'
 
+const SmartWattRoute = SmartWattRouteImport.update({
+  id: '/smart-watt',
+  path: '/smart-watt',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
@@ -61,6 +67,7 @@ export interface FileRoutesByFullPath {
   '/rooms': typeof RoomsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/smart-watt': typeof SmartWattRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -70,6 +77,7 @@ export interface FileRoutesByTo {
   '/rooms': typeof RoomsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/smart-watt': typeof SmartWattRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -80,6 +88,7 @@ export interface FileRoutesById {
   '/rooms': typeof RoomsRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/smart-watt': typeof SmartWattRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -91,6 +100,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/settings'
     | '/sitemap.xml'
+    | '/smart-watt'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -100,6 +110,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/settings'
     | '/sitemap.xml'
+    | '/smart-watt'
   id:
     | '__root__'
     | '/'
@@ -109,6 +120,7 @@ export interface FileRouteTypes {
     | '/rooms'
     | '/settings'
     | '/sitemap.xml'
+    | '/smart-watt'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -119,10 +131,18 @@ export interface RootRouteChildren {
   RoomsRoute: typeof RoomsRoute
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  SmartWattRoute: typeof SmartWattRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/smart-watt': {
+      id: '/smart-watt'
+      path: '/smart-watt'
+      fullPath: '/smart-watt'
+      preLoaderRoute: typeof SmartWattRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -183,6 +203,7 @@ const rootRouteChildren: RootRouteChildren = {
   RoomsRoute: RoomsRoute,
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  SmartWattRoute: SmartWattRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
