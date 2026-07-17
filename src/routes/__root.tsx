@@ -10,11 +10,22 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Zap, Settings as SettingsIcon, LogOut } from "lucide-react";
+import {
+  Zap,
+  Settings as SettingsIcon,
+  LogOut,
+  Cloud,
+  CloudOff,
+  Wifi,
+  WifiOff,
+  Mic,
+  User,
+  Clock,
+} from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { supabase, supabaseConfigured } from "@/lib/supabase";
+import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
 // Cypher Global Integration imports
@@ -240,43 +251,218 @@ function Splash({ onComplete }: SplashProps) {
   );
 }
 
-function TopBar({ isAuthenticated }: { isAuthenticated: boolean }) {
+// ------------------------------------------------------------------
+// CINEMATIC GLOBAL BACKGROUND WITH HIGH-FIDELITY RADIAL GLOWS & CUSTOM LIGHTWEIGHT CSS PARTICLES
+// ------------------------------------------------------------------
+interface BackgroundSystemProps {
+  intensity: "full" | "quiet";
+}
+
+function BackgroundSystem({ intensity }: BackgroundSystemProps) {
+  const isFull = intensity === "full";
+
   return (
-    <header className="sticky top-0 z-40 border-b border-white/5 bg-[#07101F]/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-4xl items-center gap-3 px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2.5">
-          <span className="grid h-8 w-8 place-items-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
-            <Zap className="h-4 w-4" strokeWidth={2.4} />
+    <div className="fixed inset-0 -z-50 overflow-hidden bg-[#050914] select-none pointer-events-none">
+      {/* Deep Space Grid */}
+      <div
+        className="absolute inset-0 opacity-[0.03] transition-opacity duration-1000"
+        style={{
+          backgroundImage: `linear-gradient(to right, rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+                            linear-gradient(to bottom, rgba(255, 255, 255, 0.1) 1px, transparent 1px)`,
+          backgroundSize: "60px 60px",
+        }}
+      />
+
+      {/* Large Glowing Blue and Indigo Nebulae */}
+      <div className="absolute inset-0 transition-all duration-1000">
+        <div
+          className="absolute -top-[20%] -left-[10%] h-[80%] w-[60%] rounded-full mix-blend-screen filter blur-[120px] opacity-[0.22]"
+          style={{
+            background: "radial-gradient(circle, oklch(0.62 0.19 256) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute top-[40%] -right-[15%] h-[90%] w-[70%] rounded-full mix-blend-screen filter blur-[140px] opacity-[0.18]"
+          style={{
+            background: "radial-gradient(circle, oklch(0.68 0.22 254) 0%, transparent 70%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-[20%] left-[20%] h-[70%] w-[65%] rounded-full mix-blend-screen filter blur-[130px] opacity-[0.15]"
+          style={{
+            background: "radial-gradient(circle, oklch(0.72 0.18 144 / 40%) 0%, transparent 70%)",
+          }}
+        />
+      </div>
+
+      {/* Elegant Breathing Glow Core Behind Cards */}
+      {isFull && (
+        <motion.div
+          animate={{
+            opacity: [0.12, 0.25, 0.12],
+            scale: [1, 1.05, 1],
+          }}
+          transition={{
+            duration: 8,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="absolute top-[30%] left-[30%] h-[50%] w-[50%] -translate-x-1/2 -translate-y-1/2 rounded-full filter blur-[150px]"
+          style={{
+            background: "radial-gradient(circle, oklch(0.62 0.19 256 / 40%) 0%, transparent 80%)",
+          }}
+        />
+      )}
+
+      {/* Lightweight Floating Particles (CSS Animation to preserve CPU & Battery) */}
+      {isFull && (
+        <div className="absolute inset-0">
+          <div className="absolute top-[15%] left-[25%] h-1 w-1 rounded-full bg-primary/40 animate-particle" />
+          <div
+            className="absolute top-[45%] left-[65%] h-1.5 w-1.5 rounded-full bg-primary/30 animate-particle"
+            style={{ animationDelay: "2s", animationDuration: "14s" }}
+          />
+          <div
+            className="absolute top-[75%] left-[15%] h-1 w-1 rounded-full bg-success/30 animate-particle"
+            style={{ animationDelay: "4s", animationDuration: "10s" }}
+          />
+          <div
+            className="absolute top-[30%] left-[85%] h-2 w-2 rounded-full bg-primary/20 animate-particle"
+            style={{ animationDelay: "1s", animationDuration: "16s" }}
+          />
+          <div
+            className="absolute top-[80%] left-[75%] h-1 w-1 rounded-full bg-warning/30 animate-particle"
+            style={{ animationDelay: "5s", animationDuration: "11s" }}
+          />
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TopBar({
+  isAuthenticated,
+  deviceOnline,
+  realtimeOk,
+  lastUpdated,
+  cypherState,
+  onOpenCypher,
+}: {
+  isAuthenticated: boolean;
+  deviceOnline: boolean;
+  realtimeOk: boolean;
+  lastUpdated: string;
+  cypherState: string;
+  onOpenCypher: () => void;
+}) {
+  return (
+    <header className="sticky top-0 z-40 w-full border-b border-white/[0.04] bg-[#050914]/40 backdrop-blur-2xl">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
+        <Link to="/" className="flex items-center gap-3">
+          <span className="grid h-9 w-9 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary shadow-[0_0_15px_oklch(0.62_0.19_256_/_20%)]">
+            <Zap className="h-4.5 w-4.5" strokeWidth={2.5} />
           </span>
           <span className="leading-tight">
-            <span className="block font-display text-sm font-bold tracking-widest text-foreground">
+            <span className="block font-display text-sm font-bold tracking-[0.15em] text-foreground">
               SMART WATT
             </span>
-            <span className="block text-[10px] uppercase tracking-[0.2em] text-muted-foreground">
-              Powered by NoskyTech
+            <span className="block text-[9px] uppercase tracking-[0.25em] text-muted-foreground/80">
+              NoskyTech OS
             </span>
           </span>
         </Link>
+
         {isAuthenticated && (
-          <nav className="ml-auto hidden items-center gap-1 sm:flex">
-            <NavLink to="/" icon={<Zap className="h-4 w-4" />}>
-              Control
-            </NavLink>
-            <NavLink to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>
-              Settings
-            </NavLink>
-          </nav>
+          <div className="hidden items-center gap-4 md:flex">
+            {/* Cloud Status */}
+            <span
+              className={cn(
+                "status-pill",
+                realtimeOk ? "status-pill-online" : "status-pill-offline",
+              )}
+            >
+              {realtimeOk ? (
+                <>
+                  <Cloud className="h-3 w-3 animate-pulse" />
+                  Cloud Realtime
+                </>
+              ) : (
+                <>
+                  <CloudOff className="h-3 w-3" />
+                  Cloud Polling
+                </>
+              )}
+            </span>
+
+            {/* Device Online */}
+            <span
+              className={cn(
+                "status-pill",
+                deviceOnline ? "status-pill-online" : "status-pill-offline",
+              )}
+            >
+              {deviceOnline ? (
+                <>
+                  <Wifi className="h-3 w-3" />
+                  <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" />
+                  Device Active
+                </>
+              ) : (
+                <>
+                  <WifiOff className="h-3 w-3" />
+                  Device Offline
+                </>
+              )}
+            </span>
+
+            {/* Last Updated */}
+            {lastUpdated && (
+              <span className="inline-flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground/70">
+                <Clock className="h-3 w-3" />
+                Updated {lastUpdated}
+              </span>
+            )}
+          </div>
         )}
-        {isAuthenticated && (
-          <button
-            onClick={() => supabase.auth.signOut()}
-            className="ml-auto grid h-9 w-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground sm:ml-0"
-            aria-label="Sign out"
-            title="Sign out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        )}
+
+        <div className="flex items-center gap-2">
+          {isAuthenticated && (
+            <nav className="mr-2 hidden items-center gap-1 sm:flex">
+              <NavLink to="/" icon={<Zap className="h-4 w-4" />}>
+                Dashboard
+              </NavLink>
+              <NavLink to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>
+                Settings
+              </NavLink>
+            </nav>
+          )}
+
+          {isAuthenticated && (
+            <button
+              onClick={onOpenCypher}
+              className={cn(
+                "relative flex h-9 items-center gap-2 rounded-xl border border-white/[0.08] px-3.5 text-xs font-semibold backdrop-blur-md transition-all hover:bg-white/[0.04]",
+                cypherState === "listening" && "border-primary/50 text-primary glow-primary",
+              )}
+            >
+              <Mic className={cn("h-3.5 w-3.5", cypherState === "listening" && "animate-pulse")} />
+              <span className="hidden sm:inline">
+                {cypherState === "listening" ? "Listening" : "Ask Cypher"}
+              </span>
+            </button>
+          )}
+
+          {isAuthenticated && (
+            <button
+              onClick={() => supabase.auth.signOut()}
+              className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
+              aria-label="Sign out"
+              title="Sign out"
+            >
+              <LogOut className="h-4 w-4" />
+            </button>
+          )}
+        </div>
       </div>
     </header>
   );
@@ -289,8 +475,10 @@ function NavLink({ to, icon, children }: { to: string; icon: ReactNode; children
     <Link
       to={to}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-        active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
+        "inline-flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs font-bold uppercase tracking-wider transition-all",
+        active
+          ? "bg-primary/10 text-primary border border-primary/10 shadow-[0_0_15px_oklch(0.62_0.19_256_/_10%)]"
+          : "text-muted-foreground border border-transparent hover:text-foreground",
       )}
     >
       {icon}
@@ -305,11 +493,11 @@ function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
   if (!isAuthenticated) return null;
 
   const items = [
-    { to: "/", label: "Control", icon: Zap },
+    { to: "/", label: "Dashboard", icon: Zap },
     { to: "/settings", label: "Settings", icon: SettingsIcon },
   ];
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/5 bg-[#07101F]/90 backdrop-blur-xl sm:hidden">
+    <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-white/[0.04] bg-[#050914]/85 backdrop-blur-2xl sm:hidden">
       <div className="mx-auto grid max-w-md grid-cols-2 px-4 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2">
         {items.map((it) => {
           const active = it.to === "/" ? pathname === "/" : pathname.startsWith(it.to);
@@ -318,19 +506,19 @@ function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
               key={it.to}
               to={it.to}
               className={cn(
-                "flex flex-col items-center gap-1 rounded-xl py-2 text-[11px] font-medium transition-colors",
+                "flex flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-bold uppercase tracking-wider transition-colors",
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >
               <span
                 className={cn(
-                  "grid h-9 w-9 place-items-center rounded-lg transition",
-                  active ? "bg-primary/15" : "",
+                  "grid h-9 w-9 place-items-center rounded-xl transition-all",
+                  active ? "bg-primary/10 border border-primary/15" : "",
                 )}
               >
                 <it.icon
-                  className="h-4.5 w-4.5"
-                  style={{ height: "1.125rem", width: "1.125rem" }}
+                  className="h-4 w-4"
+                  style={{ height: "1rem", width: "1rem" }}
                 />
               </span>
               {it.label}
@@ -347,6 +535,10 @@ function RootComponent() {
   const [splashDone, setSplashDone] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const [device, setDevice] = useState<SmartWattDevice | null>(null);
+  const [realtimeOk, setRealtimeOk] = useState(false);
+
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   // Auth State listener
   useEffect(() => {
@@ -363,17 +555,81 @@ function RootComponent() {
 
   const isAuthenticated = !!session;
 
+  // Real-time device connection sync for header
+  useEffect(() => {
+    if (!supabaseConfigured || !isAuthenticated) return;
+    let cancelled = false;
+
+    const fetchDeviceStatus = async () => {
+      const { data } = await supabase
+        .from("smart_watt_devices")
+        .select("*")
+        .eq("device_code", "SW-0001")
+        .maybeSingle();
+      if (!cancelled && data) {
+        setDevice(data as SmartWattDevice);
+      }
+    };
+
+    fetchDeviceStatus();
+
+    const channel = supabase
+      .channel("root_realtime_status")
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "smart_watt_devices",
+          filter: "device_code=eq.SW-0001",
+        },
+        (payload) => {
+          if (!cancelled && payload.new) {
+            setDevice(payload.new as SmartWattDevice);
+          }
+        },
+      )
+      .subscribe((state) => {
+        if (!cancelled) {
+          setRealtimeOk(state === "SUBSCRIBED");
+        }
+      });
+
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(channel);
+    };
+  }, [isAuthenticated]);
+
   // Initialize unified global Cypher brain hook
   const cypher = useCypher(isAuthenticated);
+
+  // Configure Background Intensity depending on routes
+  const backgroundIntensity = pathname === "/" ? "full" : "quiet";
+
+  const formattedLastUpdated = device?.updated_at
+    ? new Date(device.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    : "";
 
   return (
     <QueryClientProvider client={queryClient}>
       <AnimatePresence>
         {!splashDone && <Splash key="splash" onComplete={() => setSplashDone(true)} />}
       </AnimatePresence>
+
+      {/* Global Background System */}
+      <BackgroundSystem intensity={backgroundIntensity} />
+
       <div className="flex min-h-screen flex-col">
-        <TopBar isAuthenticated={isAuthenticated} />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pb-10">
+        <TopBar
+          isAuthenticated={isAuthenticated}
+          deviceOnline={device?.online ?? false}
+          realtimeOk={realtimeOk}
+          lastUpdated={formattedLastUpdated}
+          cypherState={cypher.state}
+          onOpenCypher={() => setIsDrawerOpen(true)}
+        />
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pb-10">
           <Outlet />
         </main>
         <BottomNav isAuthenticated={isAuthenticated} />
