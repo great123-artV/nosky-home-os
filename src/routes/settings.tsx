@@ -106,8 +106,10 @@ function SettingsPage() {
   useEffect(() => {
     if (typeof navigator === "undefined" || !("permissions" in navigator)) return;
     try {
-      // @ts-expect-error microphone permission is not typed in all envs
-      navigator.permissions.query({ name: "microphone" }).then((p) => {
+      const perms = navigator.permissions as unknown as {
+        query: (d: { name: string }) => Promise<{ state: string; onchange: (() => void) | null }>;
+      };
+      perms.query({ name: "microphone" }).then((p) => {
         setMicPerm(p.state);
         p.onchange = () => setMicPerm(p.state);
       }).catch(() => setMicPerm("unknown"));
