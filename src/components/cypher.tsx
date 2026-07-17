@@ -35,7 +35,7 @@ export function CypherPanel({
   const [transcript, setTranscript] = useState("");
   const [textInput, setTextInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const recogRef = useRef<ReturnType<NonNullable<ReturnType<typeof getSpeechRecognitionCtor>>> | null>(null);
+  const recogRef = useRef<InstanceType<NonNullable<ReturnType<typeof getSpeechRecognitionCtor>>> | null>(null);
   const supportsVoice = !!getSpeechRecognitionCtor();
 
   // Derive live state
