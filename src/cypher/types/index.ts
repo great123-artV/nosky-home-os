@@ -1,13 +1,21 @@
-export type CypherState =
-  | "sleeping"
+export type AudioEngineState =
+  | "idle"
+  | "requesting_permission"
+  | "ready"
+  | "starting"
   | "listening"
+  | "transcript_received"
   | "processing"
   | "executing"
+  | "generating_voice"
   | "speaking"
-  | "offline"
-  | "permission_required"
-  | "microphone_disabled"
-  | "reconnecting";
+  | "paused"
+  | "stopped"
+  | "unsupported"
+  | "permission_denied"
+  | "error";
+
+export type CypherState = AudioEngineState; // Align visual states with our core engine states
 
 export type CypherIntent =
   | "TURN_ON"
@@ -49,4 +57,28 @@ export interface HistoryItem {
   intent: CypherIntent;
   result: string;
   status: "Completed" | "Answered" | "Failed" | "Pending";
+}
+
+export interface AudioDiagnostics {
+  browserName: string;
+  browserVersion: string;
+  isPWA: boolean;
+  recognitionSupported: boolean;
+  activeRecognitionCount: number;
+  microphonePermission: string;
+  audioState: AudioEngineState;
+  conversationMode: boolean;
+  restartCount: number;
+  lastRecognitionError: string;
+  lastStartBlockReason: string;
+  lastInterimTranscript: string;
+  lastFinalTranscript: string;
+  duplicateTranscriptPrevented: boolean;
+  ttsProvider: "elevenlabs" | "browser" | "text-only";
+  elevenLabsStatus: string;
+  elevenLabsLatency: number;
+  playbackStatus: string;
+  autoplayUnlocked: boolean;
+  activeTimersCount: number;
+  currentRequestId: string;
 }

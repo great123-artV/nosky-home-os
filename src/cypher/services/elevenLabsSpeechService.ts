@@ -10,7 +10,8 @@ export const elevenLabsSpeechService = {
    */
   async speak(
     text: string,
-    onStatus: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void
+    onStatus: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void,
+    options?: { responseType?: string; requestId?: string }
   ): Promise<boolean> {
     this.stop();
 
@@ -23,13 +24,15 @@ export const elevenLabsSpeechService = {
     // Try ElevenLabs Edge Function first (unless browserVoiceFallback is forced or we run in local mode without it)
     if (!settings.browserVoiceFallback) {
       try {
-        onStatus("elevenlabs");
+        const requestId = options?.requestId || "req_" + Math.random().toString(36).substring(2, 9);
+        const responseType = options?.responseType || "knowledge";
 
         const { data, error } = await supabase.functions.invoke("cypher-speech", {
           body: {
             text,
-            volume: settings.voiceVolume,
-            rate: settings.speechRate,
+            voiceId: "21m00Tcm4TlvDq8ikWAM", // Default premium Rachel voice
+            requestId,
+            responseType
           },
         });
 
@@ -42,7 +45,6 @@ export const elevenLabsSpeechService = {
             const audioSrc = `data:audio/mpeg;base64,${data.audio}`;
             const audio = new Audio(audioSrc);
             audio.volume = settings.voiceVolume;
-            // PlaybackRate is only supported if we use standard browser voice synthesis, but let's try
             audio.playbackRate = settings.speechRate;
             currentAudio = audio;
 

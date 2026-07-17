@@ -1,6 +1,6 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Trash2, Sliders, Info, MessageSquare, ExternalLink, Settings, ShieldAlert } from "lucide-react";
+import { X, Trash2, Sliders, Info, MessageSquare, ExternalLink, Settings, ShieldAlert, Terminal, Shield } from "lucide-react";
 import { UseCypherReturn } from "../hooks/useCypher";
 import { cypherHistoryService } from "../history/historyService";
 import { QuickSettings } from "./QuickSettings";
@@ -13,8 +13,9 @@ interface CypherDrawerProps {
 }
 
 export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
-  const { state, history, statusMessage, transcript, interimTranscript, settings, followUpCountdown } = cypher;
+  const { state, history, statusMessage, transcript, interimTranscript, settings, followUpCountdown, diagnostics } = cypher;
   const historyEndRef = useRef<HTMLDivElement | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
 
   useEffect(() => {
     if (isOpen && historyEndRef.current) {
@@ -32,7 +33,7 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
         animate={{ opacity: 0.5 }}
         exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-50 bg-black backdrop-blur-sm"
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm"
       />
 
       {/* Drawer Panel Container */}
@@ -50,8 +51,12 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
         <header className="flex h-14 items-center justify-between border-b border-white/5 px-4 sm:px-6">
           <div className="flex items-center gap-2">
             <span className="relative flex h-3 w-3">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
-              <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
+              <span className={`absolute inline-flex h-full w-full animate-ping rounded-full opacity-75 ${
+                state === "listening" ? "bg-primary" : "bg-green-500"
+              }`} />
+              <span className={`relative inline-flex h-3 w-3 rounded-full ${
+                state === "listening" ? "bg-primary" : "bg-green-500"
+              }`} />
             </span>
             <h2 id="cypher-title" className="font-display text-sm font-bold tracking-widest text-foreground">
               CYPHER VOICE LAYER
@@ -103,7 +108,7 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
             </div>
 
             {/* Stop Action Bar */}
-            {(state !== "sleeping" && state !== "offline") && (
+            {(state !== "idle" && state !== "unsupported" && state !== "permission_denied") && (
               <div className="flex justify-end pt-1">
                 <button
                   onClick={() => cypher.handleStop()}
@@ -163,6 +168,45 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
               </div>
             )}
           </div>
+
+          {/* Development Diagnostics section */}
+          {diagnostics && (
+            <div className="space-y-2">
+              <button
+                onClick={() => setShowDiagnostics(!showDiagnostics)}
+                className="flex w-full items-center justify-between rounded-xl border border-white/5 bg-background/40 px-3.5 py-2.5 text-xs font-semibold text-foreground hover:bg-accent"
+              >
+                <span className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4 text-primary" /> Audio Diagnostics
+                </span>
+                <span className="text-[10px] text-muted-foreground">{showDiagnostics ? "Hide" : "Show"}</span>
+              </button>
+
+              <AnimatePresence>
+                {showDiagnostics && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    exit={{ opacity: 0, height: 0 }}
+                    className="overflow-hidden rounded-xl bg-black/50 p-3 border border-white/5 text-[10px] font-mono space-y-1.5 leading-normal text-muted-foreground"
+                  >
+                    <div><span className="text-foreground">Browser:</span> {diagnostics.browserName} ({diagnostics.isPWA ? "PWA Standalone" : "Web Tab"})</div>
+                    <div><span className="text-foreground">State Node:</span> {diagnostics.audioState.toUpperCase()}</div>
+                    <div><span className="text-foreground">Continuous Recog Limit:</span> {diagnostics.conversationMode ? "Always-On" : "PTT"}</div>
+                    <div><span className="text-foreground">Recog Instances Count:</span> {diagnostics.activeRecognitionCount}</div>
+                    <div><span className="text-foreground">Mic Permission:</span> {diagnostics.microphonePermission.toUpperCase()}</div>
+                    <div><span className="text-foreground">Restart Count:</span> {diagnostics.restartCount}</div>
+                    {diagnostics.lastRecognitionError && <div className="text-red-400"><span className="text-foreground">Last Rec Error:</span> {diagnostics.lastRecognitionError}</div>}
+                    {diagnostics.lastStartBlockReason && <div className="text-orange-400"><span className="text-foreground">Block Reason:</span> {diagnostics.lastStartBlockReason}</div>}
+                    <div><span className="text-foreground">TTS Provider:</span> {diagnostics.ttsProvider.toUpperCase()}</div>
+                    <div><span className="text-foreground">ElevenLabs Status:</span> {diagnostics.elevenLabsStatus.toUpperCase()}</div>
+                    <div><span className="text-foreground">ElevenLabs Latency:</span> {diagnostics.elevenLabsLatency}ms</div>
+                    <div><span className="text-foreground">Autoplay Unlocked:</span> {diagnostics.autoplayUnlocked ? "Yes" : "No"}</div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Full Settings & support link redirection buttons */}
           <div className="grid grid-cols-2 gap-2">
