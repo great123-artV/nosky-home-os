@@ -1,10 +1,22 @@
 import { useEffect, useRef, useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Mic, MicOff, Loader2, X, Send } from "lucide-react";
-import { getSpeechRecognitionCtor, parseCypherIntent, speak, type CypherIntent } from "@/lib/cypher";
+import {
+  getSpeechRecognitionCtor,
+  parseCypherIntent,
+  speak,
+  type CypherIntent,
+} from "@/lib/cypher";
 import { cn } from "@/lib/utils";
 
-export type CypherState = "idle" | "listening" | "processing" | "sending" | "waiting" | "success" | "error";
+export type CypherState =
+  | "idle"
+  | "listening"
+  | "processing"
+  | "sending"
+  | "waiting"
+  | "success"
+  | "error";
 
 export type CypherAction = {
   intent: CypherIntent;
@@ -35,7 +47,9 @@ export function CypherPanel({
   const [transcript, setTranscript] = useState("");
   const [textInput, setTextInput] = useState("");
   const [error, setError] = useState<string | null>(null);
-  const recogRef = useRef<InstanceType<NonNullable<ReturnType<typeof getSpeechRecognitionCtor>>> | null>(null);
+  const recogRef = useRef<InstanceType<
+    NonNullable<ReturnType<typeof getSpeechRecognitionCtor>>
+  > | null>(null);
   const supportsVoice = !!getSpeechRecognitionCtor();
 
   // Derive live state
@@ -53,19 +67,27 @@ export function CypherPanel({
             : state === "success"
               ? "Command confirmed"
               : state === "error"
-                ? error ?? "Something went wrong"
+                ? (error ?? "Something went wrong")
                 : "Ask Cypher");
 
-  useEffect(() => () => {
-    try { recogRef.current?.abort(); } catch { /* noop */ }
-  }, []);
+  useEffect(
+    () => () => {
+      try {
+        recogRef.current?.abort();
+      } catch {
+        /* noop */
+      }
+    },
+    [],
+  );
 
   function dispatch(text: string) {
     setTranscript(text);
     setLocalState("processing");
     const intent = parseCypherIntent(text);
     if (intent === "UNKNOWN") {
-      const msg = "I did not understand that command. Please say turn on the bulb or turn off the bulb.";
+      const msg =
+        "I did not understand that command. Please say turn on the bulb or turn off the bulb.";
       setError(msg);
       setLocalState("error");
       speak(msg, speechEnabled);
@@ -120,7 +142,11 @@ export function CypherPanel({
   }
 
   function cancel() {
-    try { recogRef.current?.abort(); } catch { /* noop */ }
+    try {
+      recogRef.current?.abort();
+    } catch {
+      /* noop */
+    }
     setLocalState("idle");
     setError(null);
   }
@@ -133,7 +159,8 @@ export function CypherPanel({
     dispatch(v);
   }
 
-  const busy = state === "listening" || state === "processing" || state === "sending" || state === "waiting";
+  const busy =
+    state === "listening" || state === "processing" || state === "sending" || state === "waiting";
 
   return (
     <div className="glass rounded-2xl border border-white/10 p-4 sm:p-5">
@@ -223,7 +250,9 @@ export function CypherPanel({
           type="text"
           value={textInput}
           onChange={(e) => setTextInput(e.target.value)}
-          placeholder={supportsVoice ? "Or type: turn on the bulb" : "Type a command: turn on the bulb"}
+          placeholder={
+            supportsVoice ? "Or type: turn on the bulb" : "Type a command: turn on the bulb"
+          }
           disabled={busy}
           className="h-10 flex-1 rounded-xl border border-border bg-background/40 px-3 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary/60 focus:outline-none focus:ring-1 focus:ring-primary/40"
         />

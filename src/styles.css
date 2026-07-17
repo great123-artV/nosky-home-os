@@ -125,7 +125,8 @@
   );
 
   /* Shadows */
-  --shadow-glow: 0 0 0 1px oklch(0.62 0.19 256 / 0.2), 0 20px 60px -20px oklch(0.62 0.19 256 / 0.45);
+  --shadow-glow:
+    0 0 0 1px oklch(0.62 0.19 256 / 0.2), 0 20px 60px -20px oklch(0.62 0.19 256 / 0.45);
   --shadow-card: 0 24px 60px -30px oklch(0.1 0.02 264 / 0.8);
   --shadow-soft: 0 8px 30px -12px oklch(0.1 0.02 264 / 0.6);
 
