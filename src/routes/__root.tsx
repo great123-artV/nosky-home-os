@@ -247,8 +247,8 @@ function Splash({ onComplete }: SplashProps) {
     <motion.div
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: 0.6, ease: "easeInOut" }}
-      className="fixed inset-0 z-[200] flex flex-col justify-between bg-[#07101F] overflow-hidden select-none"
+      transition={{ duration: 0.4, ease: "easeInOut" }}
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#07101F] overflow-hidden select-none"
     >
       {/* 1. Ambient Glow behind the Image (Centered, soft, electric blue, radial, low opacity, breathing) */}
       <div
@@ -276,30 +276,28 @@ function Splash({ onComplete }: SplashProps) {
         />
       </div>
 
-      {/* Main Container */}
-      <div className="relative flex-1 flex flex-col items-center justify-center px-4 max-w-lg mx-auto w-full">
-        {/* Relative Hero Container holding the Artwork + Overlays */}
-        <div className="relative w-full max-h-[60vh] aspect-[941/1672] flex items-center justify-center">
-          {/* Main Artwork - Edge-to-edge on mobile, contained aspect ratio, pristine fallback deep navy */}
-          <img
-            src="/splash-artwork.png"
-            alt="SMART WATT Official Splash Screen"
-            className="w-full h-full object-contain select-none pointer-events-none"
-          />
+      {/* Main Container: Scales to 100% viewport height and centers itself on laptops, adapts safely to phone viewports */}
+      <div className="relative h-[100dvh] max-h-[100dvh] max-w-full aspect-[941/1672] flex items-center justify-center overflow-hidden">
+        {/* Main Artwork - 100% height, contained aspect ratio */}
+        <img
+          src="/splash-artwork.png"
+          alt="SMART WATT Official Splash Screen"
+          className="w-full h-full object-contain select-none pointer-events-none"
+        />
 
-          {/* OVERLAY ELEMENTS (Using analyzed precise percentages for coordinates) */}
+        {/* OVERLAY ELEMENTS (Using analyzed precise percentages for coordinates) */}
 
-          {/* A. Cloud Icon Overlay (Center: 49.95%, 36.51% | Soft breathing blue glow, spark particles, subtle electric pulse) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: "49.95%",
-              top: "36.51%",
-              width: "48.67%",
-              height: "7.00%",
-              transform: "translate(-50%, -50%)",
-            }}
-          >
+        {/* A. Cloud Icon Overlay (Center: 49.95%, 36.51% | Soft breathing blue glow, spark particles, subtle electric pulse) */}
+        <div
+          className="absolute pointer-events-none"
+          style={{
+            left: "49.95%",
+            top: "36.51%",
+            width: "48.67%",
+            height: "7.00%",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
             {/* Ambient Breathing Blue Glow */}
             <motion.div
               animate={{
@@ -473,92 +471,84 @@ function Splash({ onComplete }: SplashProps) {
               className="absolute -inset-2 rounded-full bg-blue-400/45 blur-xs"
             />
           </div>
-        </div>
 
-        {/* LOADING EXPERIENCE (Positioned below the artwork, Premium Glass-like Animated Loading Component) */}
-        <div className="w-full max-w-[280px] mt-8 flex flex-col items-center">
-          {/* Glass-like Loading Bar Container */}
-          <div className="relative w-full h-[6px] rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-md overflow-hidden shadow-inner">
-            {/* Electric Blue Gradient Progress Fill with Outer Glow */}
+          {/* LOADING EXPERIENCE (Floating elegantly on top of the image artwork at bottom area ~14% from bottom) */}
+          <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 w-full max-w-[280px] px-4 flex flex-col items-center pointer-events-none">
+            {/* Glass-like Loading Bar Container */}
+            <div className="relative w-full h-[6px] rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-md overflow-hidden shadow-inner">
+              {/* Electric Blue Gradient Progress Fill with Outer Glow */}
+              <motion.div
+                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-500 rounded-full"
+                style={{ width: `${progress}%` }}
+                animate={
+                  isFinishing
+                    ? {
+                        boxShadow: ["0 0 4px #3b82f6", "0 0 12px #06b6d4", "0 0 4px #3b82f6"],
+                      }
+                    : {}
+                }
+                transition={{ duration: 0.8 }}
+              />
+
+              {/* Tiny traveling particles inside the loading bar */}
+              {progress < 100 &&
+                loadingParticles.map((pt) => (
+                  <motion.div
+                    key={pt.id}
+                    className="absolute top-0 w-[2px] h-full bg-blue-100/60 rounded-full"
+                    style={{ left: `${pt.left}%` }}
+                    animate={{
+                      x: ["0px", "120px"],
+                      opacity: [0, 0.8, 0],
+                    }}
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      delay: pt.delay,
+                      ease: "linear",
+                    }}
+                  />
+                ))}
+
+              {/* Soft outer glow & subtle reflection overlay */}
+              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent pointer-events-none" />
+            </div>
+
+            {/* Gently pulsing loading glow indicator */}
             <motion.div
-              className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-500 rounded-full"
-              style={{ width: `${progress}%` }}
-              animate={
-                isFinishing
-                  ? {
-                      boxShadow: ["0 0 4px #3b82f6", "0 0 12px #06b6d4", "0 0 4px #3b82f6"],
-                    }
-                  : {}
-              }
-              transition={{ duration: 0.8 }}
+              animate={{
+                opacity: isFinishing ? [0.4, 0.9, 0.4] : [0.2, 0.5, 0.2],
+              }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="w-full h-[1px] bg-cyan-400/40 blur-xs mt-0.5"
             />
 
-            {/* Tiny traveling particles inside the loading bar */}
-            {progress < 100 &&
-              loadingParticles.map((pt) => (
-                <motion.div
-                  key={pt.id}
-                  className="absolute top-0 w-[2px] h-full bg-blue-100/60 rounded-full"
-                  style={{ left: `${pt.left}%` }}
-                  animate={{
-                    x: ["0px", "120px"],
-                    opacity: [0, 0.8, 0],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    delay: pt.delay,
-                    ease: "linear",
-                  }}
-                />
-              ))}
+            {/* Numeric loading counter - smoothly incrementing 1 to 100 */}
+            <div className="mt-3 font-display text-xs font-semibold tracking-wider text-cyan-400/80">
+              {Math.round(progress)}%
+            </div>
 
-            {/* Soft outer glow & subtle reflection overlay */}
-            <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent pointer-events-none" />
-          </div>
-
-          {/* Gently pulsing loading glow indicator */}
-          <motion.div
-            animate={{
-              opacity: isFinishing ? [0.4, 0.9, 0.4] : [0.2, 0.5, 0.2],
-            }}
-            transition={{
-              duration: 2,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
-            className="w-full h-[1px] bg-cyan-400/40 blur-xs mt-0.5"
-          />
-
-          {/* Numeric loading counter - smoothly incrementing 1 to 100 */}
-          <div className="mt-3 font-display text-xs font-semibold tracking-wider text-cyan-400/80">
-            {Math.round(progress)}%
-          </div>
-
-          {/* INITIALIZATION STATUS: Minimal, cleanly faded message cycle */}
-          <div className="h-6 mt-2 flex items-center justify-center">
-            <AnimatePresence mode="wait">
-              <motion.p
-                key={msg}
-                initial={{ opacity: 0, y: 4 }}
-                animate={{ opacity: 0.7, y: 0 }}
-                exit={{ opacity: 0, y: -4 }}
-                transition={{ duration: 0.35, ease: "easeInOut" }}
-                className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase text-center"
-              >
-                {msg}
-              </motion.p>
-            </AnimatePresence>
+            {/* INITIALIZATION STATUS: Minimal, cleanly faded message cycle */}
+            <div className="h-6 mt-2 flex items-center justify-center">
+              <AnimatePresence mode="wait">
+                <motion.p
+                  key={msg}
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 0.7, y: 0 }}
+                  exit={{ opacity: 0, y: -4 }}
+                  transition={{ duration: 0.35, ease: "easeInOut" }}
+                  className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase text-center"
+                >
+                  {msg}
+                </motion.p>
+              </AnimatePresence>
+            </div>
           </div>
         </div>
-      </div>
-
-      {/* Decorative Brand Tagline Placeholder for spacing to match luxurious layout */}
-      <div className="pb-8 text-center pointer-events-none opacity-40">
-        <p className="text-[10px] tracking-[0.4em] text-muted-foreground uppercase">
-          NOSKY HOME OS
-        </p>
-      </div>
     </motion.div>
   );
 }
