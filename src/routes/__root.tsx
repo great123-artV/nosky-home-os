@@ -29,6 +29,7 @@ import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supaba
 import { cn } from "@/lib/utils";
 
 // Cypher Global Integration imports
+import { SessionProvider, useSessionContext } from "@/cypher/context/SessionContext";
 import { useCypher } from "@/cypher/hooks/useCypher";
 import { CypherFloatingButton } from "@/cypher/components/CypherFloatingButton";
 import { CypherDrawer } from "@/cypher/components/CypherDrawer";
@@ -532,87 +533,34 @@ function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  return (
+    <QueryClientProvider client={queryClient}>
+      <SessionProvider>
+        <RootInner />
+      </SessionProvider>
+    </QueryClientProvider>
+  );
+}
+
+function RootInner() {
   const [splashDone, setSplashDone] = useState(false);
-  const [session, setSession] = useState<any>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [device, setDevice] = useState<SmartWattDevice | null>(null);
-  const [realtimeOk, setRealtimeOk] = useState(false);
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-
-  // Auth State listener
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
-      setSession(s);
-    });
-    return () => {
-      sub.subscription.unsubscribe();
-    };
-  }, []);
-
-  const isAuthenticated = !!session;
-
-  // Real-time device connection sync for header
-  useEffect(() => {
-    if (!supabaseConfigured || !isAuthenticated) return;
-    let cancelled = false;
-
-    const fetchDeviceStatus = async () => {
-      const { data } = await supabase
-        .from("smart_watt_devices")
-        .select("*")
-        .eq("device_code", "SW-0001")
-        .maybeSingle();
-      if (!cancelled && data) {
-        setDevice(data as SmartWattDevice);
-      }
-    };
-
-    fetchDeviceStatus();
-
-    const channel = supabase
-      .channel("root_realtime_status")
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "smart_watt_devices",
-          filter: "device_code=eq.SW-0001",
-        },
-        (payload) => {
-          if (!cancelled && payload.new) {
-            setDevice(payload.new as SmartWattDevice);
-          }
-        },
-      )
-      .subscribe((state) => {
-        if (!cancelled) {
-          setRealtimeOk(state === "SUBSCRIBED");
-        }
-      });
-
-    return () => {
-      cancelled = true;
-      supabase.removeChannel(channel);
-    };
-  }, [isAuthenticated]);
+  const sessionCtx = useSessionContext();
 
   // Initialize unified global Cypher brain hook
-  const cypher = useCypher(isAuthenticated);
+  const cypher = useCypher();
 
   // Configure Background Intensity depending on routes
   const backgroundIntensity = pathname === "/" ? "full" : "quiet";
 
-  const formattedLastUpdated = device?.updated_at
-    ? new Date(device.updated_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+  const formattedLastUpdated = sessionCtx.lastUpdated
+    ? new Date(sessionCtx.lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "";
 
   return (
-    <QueryClientProvider client={queryClient}>
+    <>
       <AnimatePresence>
         {!splashDone && <Splash key="splash" onComplete={() => setSplashDone(true)} />}
       </AnimatePresence>
@@ -622,9 +570,9 @@ function RootComponent() {
 
       <div className="flex min-h-screen flex-col">
         <TopBar
-          isAuthenticated={isAuthenticated}
-          deviceOnline={device?.online ?? false}
-          realtimeOk={realtimeOk}
+          isAuthenticated={sessionCtx.isAuthenticated}
+          deviceOnline={sessionCtx.deviceOnline}
+          realtimeOk={sessionCtx.realtimeConnected}
           lastUpdated={formattedLastUpdated}
           cypherState={cypher.state}
           onOpenCypher={() => setIsDrawerOpen(true)}
@@ -632,12 +580,13 @@ function RootComponent() {
         <main className="mx-auto w-full max-w-6xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pb-10">
           <Outlet />
         </main>
-        <BottomNav isAuthenticated={isAuthenticated} />
+        <BottomNav isAuthenticated={sessionCtx.isAuthenticated} />
       </div>
 
       {/* Global Cypher Assistant components */}
       <CypherFloatingButton cypher={cypher} onClick={() => setIsDrawerOpen(true)} />
       <CypherDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} cypher={cypher} />
-    </QueryClientProvider>
+    </>
   );
 }
+export default RootComponent;

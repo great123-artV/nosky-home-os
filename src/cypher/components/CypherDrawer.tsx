@@ -1,4 +1,4 @@
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useState } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
   X,
@@ -9,9 +9,15 @@ import {
   ExternalLink,
   Settings,
   ShieldAlert,
+  Terminal,
+  Copy,
+  Check,
 } from "lucide-react";
 import { UseCypherReturn } from "../hooks/useCypher";
 import { cypherHistoryService } from "../history/historyService";
+import { useSessionContext } from "../context/SessionContext";
+import { parseCypherIntent } from "../intents/cypherIntentRouter";
+import { cypherKnowledgeService } from "../services/cypherKnowledgeService";
 import { QuickSettings } from "./QuickSettings";
 import { Waveform } from "./Waveform";
 
@@ -31,7 +37,11 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
     settings,
     followUpCountdown,
   } = cypher;
+
+  const sessionCtx = useSessionContext();
   const historyEndRef = useRef<HTMLDivElement | null>(null);
+  const [showDiagnostics, setShowDiagnostics] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     if (isOpen && historyEndRef.current) {
@@ -40,6 +50,43 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
   }, [isOpen, history]);
 
   if (!isOpen) return null;
+
+  // Deriving real-time intent match results for Developer Diagnostics panel
+  const currentText = transcript || interimTranscript || "";
+  const parsedIntent = currentText ? parseCypherIntent(currentText) : null;
+  const knowledgeMatch = currentText
+    ? cypherKnowledgeService.queryKnowledge(currentText, sessionCtx.isAuthenticated)
+    : null;
+
+  // Sanitize and copy diagnostics report
+  const handleCopyDiagnostics = () => {
+    const report = {
+      rawTranscript: currentText || "None",
+      normalizedTranscript: currentText ? currentText.toLowerCase().trim() : "None",
+      detectedIntent: parsedIntent?.intent || "UNKNOWN",
+      matchedPattern: parsedIntent?.matchedPattern || "None",
+      confidence: parsedIntent?.confidence ?? 0,
+      selectedEngine: parsedIntent?.engine || "fallback",
+      authStatus: sessionCtx.authStatus,
+      userIdSanitized: sessionCtx.user?.id ? `USR-${sessionCtx.user.id.substring(0, 8)}...` : "Unauthenticated",
+      deviceId: sessionCtx.deviceId || "None",
+      deviceOnline: sessionCtx.deviceOnline ? "ONLINE" : "OFFLINE",
+      realtimeConnected: sessionCtx.realtimeConnected ? "CONNECTED" : "DISCONNECTED",
+      networkOnline: sessionCtx.networkOnline ? "ONLINE" : "OFFLINE",
+      desiredState: sessionCtx.desiredState ? "ON" : "OFF",
+      actualState: sessionCtx.actualState ? "ON" : "OFF",
+      pendingCommand: sessionCtx.pendingCommand ? JSON.stringify(sessionCtx.pendingCommand) : "None",
+      knowledgeMatchKey: knowledgeMatch?.item?.id || "None",
+      knowledgeSource: knowledgeMatch?.item?.source || "None",
+      microphoneStatus: sessionCtx.microphonePermission,
+      lastError: sessionCtx.lastError || "None",
+      environment: import.meta.env.MODE,
+    };
+
+    navigator.clipboard.writeText(JSON.stringify(report, null, 2));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   return (
     <AnimatePresence>
@@ -228,11 +275,134 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
               href="https://noskytech.vercel.app"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-background/40 py-2.5 text-xs font-semibold text-foreground hover:bg-accent"
+              className="flex items-center justify-center gap-2 rounded-xl border border-white/5 bg-[#050914]/40 py-2.5 text-xs font-semibold text-foreground hover:bg-accent"
             >
               About Cypher <ExternalLink className="h-3.5 w-3.5" />
             </a>
           </div>
+
+          {/* Hidden Developer Panel (Diagnostics tab) - Rendered only in Development (Requirement 4) */}
+          {import.meta.env.DEV && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/[0.02] p-4 space-y-3">
+              <button
+                onClick={() => setShowDiagnostics((prev) => !prev)}
+                className="flex w-full items-center justify-between text-xs font-bold uppercase tracking-widest text-emerald-400"
+              >
+                <span className="flex items-center gap-2">
+                  <Terminal className="h-4 w-4 animate-pulse" />
+                  Developer Diagnostics
+                </span>
+                <span className="text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded text-emerald-400">
+                  {showDiagnostics ? "Hide" : "Show"}
+                </span>
+              </button>
+
+              <AnimatePresence>
+                {showDiagnostics && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    className="overflow-hidden space-y-3.5 pt-2 border-t border-emerald-500/10"
+                  >
+                    <div className="space-y-2 text-[10px] font-mono text-emerald-300 leading-relaxed max-h-[14rem] overflow-y-auto pr-1">
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Raw Transcript:</span>
+                        <span className="text-foreground max-w-[200px] truncate text-right">"{currentText || "None"}"</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Detected Intent:</span>
+                        <span className="text-white font-bold">{parsedIntent?.intent || "UNKNOWN"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Confidence Score:</span>
+                        <span className="text-white">{parsedIntent?.confidence ?? 0}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Engine Selected:</span>
+                        <span className="text-white capitalize">{parsedIntent?.engine || "fallback"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Auth Flow State:</span>
+                        <span className="text-white uppercase">{sessionCtx.authStatus}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>User UUID:</span>
+                        <span className="text-white truncate max-w-[180px]">{sessionCtx.user?.id || "None"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Target Device ID:</span>
+                        <span className="text-white">{sessionCtx.deviceId || "None"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Device Online State:</span>
+                        <span className={sessionCtx.deviceOnline ? "text-emerald-400" : "text-red-400"}>
+                          {sessionCtx.deviceOnline ? "ONLINE" : "OFFLINE"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Realtime Status:</span>
+                        <span className={sessionCtx.realtimeConnected ? "text-emerald-400" : "text-amber-400"}>
+                          {sessionCtx.realtimeConnected ? "CONNECTED" : "DISCONNECTED"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Client Internet Connection:</span>
+                        <span className="text-white">{sessionCtx.networkOnline ? "ONLINE" : "OFFLINE"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Relay (Desired vs Actual):</span>
+                        <span className="text-white">
+                          Desired: {sessionCtx.desiredState ? "ON" : "OFF"} | Actual: {sessionCtx.actualState ? "ON" : "OFF"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Pending Handshake Cmd:</span>
+                        <span className="text-white truncate max-w-[150px]">
+                          {sessionCtx.pendingCommand ? JSON.stringify(sessionCtx.pendingCommand) : "None"}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Knowledge Match Key:</span>
+                        <span className="text-white">{knowledgeMatch?.item?.id || "None"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Knowledge Match Source:</span>
+                        <span className="text-white">{knowledgeMatch?.item?.source || "None"}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Voice Output Mode:</span>
+                        <span className="text-white uppercase">{cypher.activeVoiceMode}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Microphone Status:</span>
+                        <span className="text-white capitalize">{sessionCtx.microphonePermission}</span>
+                      </div>
+                      <div className="flex justify-between border-b border-emerald-500/5 pb-1">
+                        <span>Last Captured Error:</span>
+                        <span className="text-red-400 truncate max-w-[180px]">{sessionCtx.lastError || "None"}</span>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleCopyDiagnostics}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 py-1.5 text-[10px] font-bold text-emerald-400 hover:bg-emerald-500/20"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="h-3.5 w-3.5" /> Sanatized Report Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="h-3.5 w-3.5" /> Copy Diagnostics Report
+                        </>
+                      )}
+                    </button>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          )}
 
           {/* Privacy statement warning */}
           <div className="rounded-xl border border-white/5 bg-background/40 p-3.5">

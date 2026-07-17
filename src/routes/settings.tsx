@@ -1,6 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import type { Session, RealtimeChannel } from "@supabase/supabase-js";
 import {
   User as UserIcon,
   LogOut,
@@ -21,15 +20,17 @@ import {
   History,
   Trash2,
   Sparkles,
+  Sliders,
 } from "lucide-react";
 
-import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supabase";
+import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { Toggle } from "@/components/primitives";
 import { LegalModal } from "@/components/legal-modal";
 import { cn } from "@/lib/utils";
 import type { LegalDoc } from "@/lib/legal";
 
-// Cypher imports
+// Cypher & Session imports
+import { useSessionContext } from "@/cypher/context/SessionContext";
 import { CypherSettings, ListeningMode } from "@/cypher/types";
 import { cypherSettingsService } from "@/cypher/settings/settingsService";
 import { cypherHistoryService } from "@/cypher/history/historyService";
@@ -50,8 +51,6 @@ export const Route = createFileRoute("/settings")({
   }),
   component: SettingsPage,
 });
-
-const DEVICE_CODE = "SW-0001";
 
 function useLocalPref(key: string, defaultValue: string) {
   const [v, setV] = useState(defaultValue);
@@ -75,11 +74,8 @@ function useLocalPref(key: string, defaultValue: string) {
 }
 
 function SettingsPage() {
-  const [session, setSession] = useState<Session | null>(null);
-  const [authReady, setAuthReady] = useState(false);
-  const [device, setDevice] = useState<SmartWattDevice | null>(null);
+  const sessionCtx = useSessionContext();
   const [legal, setLegal] = useState<LegalDoc["id"] | null>(null);
-  const [micPerm, setMicPerm] = useState<string>("unknown");
 
   // Cypher integrated configuration state
   const [cypherSettings, setCypherSettings] = useState<CypherSettings>(() =>
@@ -87,20 +83,6 @@ function SettingsPage() {
   );
 
   const [theme, setTheme] = useLocalPref("sw.theme", "dark");
-
-  useEffect(() => {
-    let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session);
-      setAuthReady(true);
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => {
-      mounted = false;
-      sub.subscription.unsubscribe();
-    };
-  }, []);
 
   useEffect(() => {
     const unsub = cypherSettingsService.subscribe(setCypherSettings);
@@ -111,57 +93,7 @@ function SettingsPage() {
     cypherSettingsService.saveSettings(val);
   };
 
-  useEffect(() => {
-    if (!session || !supabaseConfigured) return;
-    let channel: RealtimeChannel | null = null;
-    (async () => {
-      const { data } = await supabase
-        .from("smart_watt_devices")
-        .select("*")
-        .eq("device_code", DEVICE_CODE)
-        .maybeSingle();
-      if (data) setDevice(data as SmartWattDevice);
-    })();
-    channel = supabase
-      .channel(`smart_watt_settings_${DEVICE_CODE}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "smart_watt_devices",
-          filter: `device_code=eq.${DEVICE_CODE}`,
-        },
-        (payload) => {
-          const next = payload.new as SmartWattDevice | undefined;
-          if (next) setDevice(next);
-        },
-      )
-      .subscribe();
-    return () => {
-      if (channel) supabase.removeChannel(channel);
-    };
-  }, [session?.user?.id]);
-
-  useEffect(() => {
-    if (typeof navigator === "undefined" || !("permissions" in navigator)) return;
-    try {
-      const perms = navigator.permissions as unknown as {
-        query: (d: { name: string }) => Promise<{ state: string; onchange: (() => void) | null }>;
-      };
-      perms
-        .query({ name: "microphone" })
-        .then((p) => {
-          setMicPerm(p.state);
-          p.onchange = () => setMicPerm(p.state);
-        })
-        .catch(() => setMicPerm("unknown"));
-    } catch {
-      setMicPerm("unknown");
-    }
-  }, []);
-
-  if (!authReady) {
+  if (sessionCtx.authStatus === "initializing") {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <Loader2 className="h-6 w-6 animate-spin text-primary" />
@@ -169,7 +101,7 @@ function SettingsPage() {
     );
   }
 
-  if (!session) {
+  if (!sessionCtx.isAuthenticated) {
     return (
       <div className="glass rounded-2xl border border-white/10 p-6 text-center">
         <p className="text-sm text-muted-foreground">
@@ -183,20 +115,44 @@ function SettingsPage() {
     );
   }
 
-  const email = session.user.email ?? "—";
+  const email = sessionCtx.user?.email ?? "—";
 
   return (
-    <div className="space-y-5">
-      <header>
-        <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-          SMART WATT
-        </p>
-        <h1 className="mt-1 font-display text-2xl font-bold text-foreground sm:text-3xl">
-          Settings
-        </h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Legal documents effective from July 2026.
-        </p>
+    <div className="space-y-5 animate-fade-in">
+      <header className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
+            SMART WATT
+          </p>
+          <h1 className="mt-1 font-display text-2xl font-bold text-foreground sm:text-3xl">
+            Settings
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Legal documents effective from July 2026.
+          </p>
+        </div>
+
+        {/* Live / Simulation switch in settings */}
+        <div className="flex items-center gap-2 rounded-xl border border-white/5 bg-background/40 p-1.5">
+          <button
+            onClick={() => sessionCtx.setSimulationMode(false)}
+            className={cn(
+              "rounded-lg px-3 py-1 text-xs font-semibold uppercase tracking-wider transition-all",
+              !sessionCtx.simulationMode ? "bg-primary text-primary-foreground font-bold shadow-glow" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Live Mode
+          </button>
+          <button
+            onClick={() => sessionCtx.setSimulationMode(true)}
+            className={cn(
+              "rounded-lg px-3 py-1 text-xs font-semibold uppercase tracking-wider transition-all",
+              sessionCtx.simulationMode ? "bg-amber-500 text-black font-bold shadow-glow" : "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            Simulation
+          </button>
+        </div>
       </header>
 
       {/* ACCOUNT */}
@@ -220,16 +176,16 @@ function SettingsPage() {
         <Row
           icon={<Zap className="h-5 w-5" />}
           label="BULB"
-          desc={`Device code · ${DEVICE_CODE} (read-only)`}
+          desc={`Device code · ${sessionCtx.deviceId || "SW-0001"} (read-only)`}
         />
         <Row
           icon={<Cpu className="h-5 w-5" />}
-          label={device?.online ? "Online" : "Offline"}
-          desc={`Confirmed state · ${device?.actual_state ? "ON" : "OFF"}`}
+          label={sessionCtx.deviceOnline ? "Online" : "Offline"}
+          desc={`Confirmed state · ${sessionCtx.actualState ? "ON" : "OFF"}`}
         />
         <Row
           icon={<Info className="h-5 w-5" />}
-          label={device?.updated_at ? new Date(device.updated_at).toLocaleString() : "—"}
+          label={sessionCtx.lastUpdated ? new Date(sessionCtx.lastUpdated).toLocaleString() : "—"}
           desc="Last update"
         />
         <Row
@@ -388,8 +344,8 @@ function SettingsPage() {
         />
 
         <Row
-          icon={micPerm === "denied" ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
-          label={`Microphone permission · ${micPerm}`}
+          icon={sessionCtx.microphonePermission === "denied" ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          label={`Microphone permission · ${sessionCtx.microphonePermission}`}
           desc="Managed securely by your browser settings"
         />
 
