@@ -25,6 +25,19 @@ import {
 
 import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supabase";
 import { Toggle } from "@/components/primitives";
+import { usePWA } from "@/hooks/usePWA";
+import {
+  Laptop,
+  Smartphone,
+  PlusSquare,
+  ArrowUpFromLine,
+  RefreshCw,
+  Radio,
+  ServerCrash,
+  Share,
+  Download,
+  ShieldCheck,
+} from "lucide-react";
 import { LegalModal } from "@/components/legal-modal";
 import { cn } from "@/lib/utils";
 import type { LegalDoc } from "@/lib/legal";
@@ -80,6 +93,7 @@ function SettingsPage() {
   const [device, setDevice] = useState<SmartWattDevice | null>(null);
   const [legal, setLegal] = useState<LegalDoc["id"] | null>(null);
   const [micPerm, setMicPerm] = useState<string>("unknown");
+  const pwa = usePWA();
 
   // Cypher integrated configuration state
   const [cypherSettings, setCypherSettings] = useState<CypherSettings>(() =>
@@ -198,6 +212,125 @@ function SettingsPage() {
           Legal documents effective from July 2026.
         </p>
       </header>
+
+      {/* APP INSTALLATION & PWA CAPABILITIES */}
+      <Section title="App Installation">
+        <div className="flex flex-col gap-4 px-5 py-5">
+          <div className="flex items-start gap-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+              {pwa.isStandalone ? (
+                <ShieldCheck className="h-5 w-5" />
+              ) : pwa.isIOS ? (
+                <Smartphone className="h-5 w-5" />
+              ) : (
+                <Laptop className="h-5 w-5" />
+              )}
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">
+                {pwa.isStandalone ? "Running as Standalone App" : "Available to Install"}
+              </p>
+              <p className="text-xs text-muted-foreground mt-0.5 leading-relaxed">
+                {pwa.isStandalone
+                  ? "SMART WATT is running in premium standalone mode with customized application behaviors, offline navigation shells, and fast boot times."
+                  : "You can add SMART WATT to your home screen or desktop to experience premium smart-home device control without browser address bar clutter."}
+              </p>
+            </div>
+          </div>
+
+          {/* Platform Specific Installer Logic */}
+          {!pwa.isStandalone && (
+            <div className="rounded-xl border border-white/5 bg-white/[0.02] p-4 mt-1">
+              {pwa.isIOS && pwa.isSafari ? (
+                <div className="space-y-3">
+                  <p className="text-xs font-semibold text-foreground">
+                    iPhone / iPad Safari Instructions:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1.5 text-xs text-muted-foreground">
+                    <li>
+                      Tap the browser <strong className="text-foreground">Share</strong> button{" "}
+                      <Share className="inline h-3.5 w-3.5 mx-0.5 align-middle" />.
+                    </li>
+                    <li>
+                      Scroll down and select{" "}
+                      <strong className="text-foreground">Add to Home Screen</strong>{" "}
+                      <PlusSquare className="inline h-3.5 w-3.5 mx-0.5 align-middle" />.
+                    </li>
+                    <li>
+                      Confirm the name and tap <strong className="text-foreground">Add</strong>.
+                    </li>
+                  </ol>
+                </div>
+              ) : pwa.isInstallable ? (
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-semibold text-foreground">One-click Installation</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Supported on Android Chrome, desktop Chrome, Edge, and compatible browsers.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => pwa.triggerInstall()}
+                    className="h-9 px-4 inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-semibold text-primary-foreground hover:brightness-110 transition-all shadow-glow"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Install App
+                  </button>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  To install, check your browser menu (typically three dots or share menu) and
+                  select <strong className="text-foreground">Install App</strong> or{" "}
+                  <strong className="text-foreground">Add to Home Screen</strong>.
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Offline Capabilities Description */}
+          <div className="rounded-xl border border-success/15 bg-success/5 p-4 mt-1">
+            <div className="flex gap-2.5">
+              <Radio className="h-4 w-4 shrink-0 text-success mt-0.5 animate-pulse-glow" />
+              <div>
+                <p className="text-xs font-semibold text-foreground">Full Offline Capability</p>
+                <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                  Thanks to our service worker cache shell, the SMART WATT application fully loads
+                  even when offline. You can view the last known device state, view your local
+                  Cypher voice assistant transcripts, and safely configure options. Controls are
+                  automatically restored once network access re-establishes.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Update detection status */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/5 pt-4 mt-2">
+            <div className="flex items-center gap-2.5">
+              <RefreshCw
+                className={cn(
+                  "h-4 w-4 text-muted-foreground",
+                  pwa.isUpdating && "animate-spin text-primary",
+                )}
+              />
+              <div className="min-w-0">
+                <p className="text-xs font-semibold text-foreground">Updates Status</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {pwa.hasUpdate ? "An update is available for download." : "App is up to date."}
+                </p>
+              </div>
+            </div>
+            {pwa.hasUpdate && (
+              <button
+                onClick={() => pwa.updateNow()}
+                disabled={pwa.isUpdating}
+                className="h-8 px-3 inline-flex items-center justify-center rounded-xl bg-primary text-[10px] font-bold text-primary-foreground hover:brightness-110 transition-all disabled:opacity-50"
+              >
+                Update now
+              </button>
+            )}
+          </div>
+        </div>
+      </Section>
 
       {/* ACCOUNT */}
       <Section title="Account">

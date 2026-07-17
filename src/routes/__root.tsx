@@ -12,6 +12,9 @@ import { useEffect, useState, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Zap, Settings as SettingsIcon, LogOut } from "lucide-react";
 
+import { PWAProvider, usePWA } from "@/hooks/usePWA";
+import { Loader2 as LoaderIcon } from "lucide-react";
+
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
@@ -93,8 +96,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "twitter:description",
         content: "A premium connected device-control platform by NoskyTech.",
       },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "SMART WATT" },
     ],
     links: [
+      { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preload", href: "/tesla-splash.webp", as: "image", type: "image/webp" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -103,6 +110,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         rel: "stylesheet",
         href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap",
       },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "icon", href: "/favicon.png", type: "image/png" },
     ],
   }),
   shellComponent: RootShell,
@@ -118,7 +127,7 @@ function RootShell({ children }: { children: ReactNode }) {
         <HeadContent />
       </head>
       <body>
-        {children}
+        <PWAProvider>{children}</PWAProvider>
         <Scripts />
       </body>
     </html>
@@ -347,6 +356,7 @@ function RootComponent() {
   const [splashDone, setSplashDone] = useState(false);
   const [session, setSession] = useState<any>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const pwa = usePWA();
 
   // Auth State listener
   useEffect(() => {
@@ -382,6 +392,67 @@ function RootComponent() {
       {/* Global Cypher Assistant components */}
       <CypherFloatingButton cypher={cypher} onClick={() => setIsDrawerOpen(true)} />
       <CypherDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} cypher={cypher} />
+
+      {/* PWA Update Banner */}
+      <AnimatePresence>
+        {pwa.hasUpdate && (
+          <motion.div
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            className="fixed bottom-20 left-4 right-4 z-50 mx-auto max-w-xl rounded-2xl border border-white/10 bg-[#07101F]/90 p-4 shadow-glow backdrop-blur-xl sm:bottom-6 sm:left-auto sm:right-6 sm:w-96"
+          >
+            <div className="flex flex-col gap-3">
+              <div>
+                <p className="font-display text-sm font-bold text-foreground">
+                  SMART WATT update available
+                </p>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  A new premium version has been deployed. Access new features and optimizations
+                  now.
+                </p>
+              </div>
+              <div className="flex gap-2.5">
+                <button
+                  onClick={async () => {
+                    // Safety logic to wait if Cypher is speaking/processing/executing, or command is sending
+                    const isCypherBusy = [
+                      "listening",
+                      "processing",
+                      "executing",
+                      "speaking",
+                    ].includes(cypher.state);
+                    if (isCypherBusy) {
+                      // Let's stop Cypher first, or alert
+                      cypher.handleStop();
+                    }
+                    await pwa.updateNow();
+                  }}
+                  disabled={pwa.isUpdating}
+                  className="flex-1 inline-flex h-9 items-center justify-center rounded-xl bg-primary text-xs font-semibold text-primary-foreground hover:brightness-110 transition-all disabled:opacity-50"
+                >
+                  {pwa.isUpdating ? (
+                    <>
+                      <LoaderIcon className="mr-1.5 h-3.5 w-3.5 animate-spin" />
+                      Updating…
+                    </>
+                  ) : (
+                    "Update now"
+                  )}
+                </button>
+                <button
+                  onClick={() => pwa.dismissUpdate()}
+                  disabled={pwa.isUpdating}
+                  className="px-4 inline-flex h-9 items-center justify-center rounded-xl border border-white/5 bg-white/[0.03] text-xs font-semibold text-foreground hover:bg-white/[0.07] transition-all disabled:opacity-50"
+                >
+                  Later
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </QueryClientProvider>
   );
 }

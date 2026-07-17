@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { motion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
 import type { RealtimeChannel, Session } from "@supabase/supabase-js";
 import {
   Loader2,
@@ -20,6 +20,8 @@ import {
 import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { BulbVisual } from "@/components/bulb";
+import { usePWA } from "@/hooks/usePWA";
+import { ArrowUpFromLine, Share, PlusSquare, X } from "lucide-react";
 import { LegalModal } from "@/components/legal-modal";
 import type { LegalDoc } from "@/lib/legal";
 
@@ -64,6 +66,31 @@ function SignIn({ onLegal }: { onLegal: (d: LegalDoc["id"]) => void }) {
   const [showPw, setShowPw] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  const pwa = usePWA();
+  const [dismissedIOS, setDismissedIOS] = useState(false);
+  const [showIOSDetails, setShowIOSDetails] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("sw.dismiss_ios_install");
+      if (stored === "true") {
+        setDismissedIOS(true);
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  const dismissIOS = () => {
+    setDismissedIOS(true);
+    try {
+      localStorage.setItem("sw.dismiss_ios_install", "true");
+    } catch {
+      /* noop */
+    }
+  };
+
+  const showIOSHelper = pwa.isIOS && pwa.isSafari && !pwa.isStandalone && !dismissedIOS;
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -82,7 +109,111 @@ function SignIn({ onLegal }: { onLegal: (d: LegalDoc["id"]) => void }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center">
+    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center relative">
+      {/* iOS Installation Subtle Helper on Landing/Sign In */}
+      <AnimatePresence>
+        {showIOSHelper && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="mb-6 glass rounded-2xl border border-white/10 p-4 relative"
+          >
+            <button
+              onClick={dismissIOS}
+              className="absolute right-3 top-3 text-muted-foreground hover:text-foreground transition-colors"
+              aria-label="Dismiss"
+            >
+              <X className="h-4 w-4" />
+            </button>
+            <div className="flex gap-3 pr-6">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                <PlusSquare className="h-4.5 w-4.5" />
+              </span>
+              <div>
+                <p className="text-xs font-bold text-foreground">
+                  Install SMART WATT on your iPhone
+                </p>
+                <p className="text-[11px] text-muted-foreground mt-0.5">
+                  Tap <Share className="inline h-3 w-3 mx-0.5" /> then choose{" "}
+                  <strong className="text-foreground">Add to Home Screen</strong>.
+                </p>
+                <div className="mt-2.5 flex gap-2">
+                  <button
+                    onClick={() => setShowIOSDetails(true)}
+                    className="text-[10px] font-bold text-primary hover:underline"
+                  >
+                    View steps
+                  </button>
+                  <button
+                    onClick={dismissIOS}
+                    className="text-[10px] font-bold text-muted-foreground hover:text-foreground"
+                  >
+                    Got it
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* iOS Steps Modal Helper */}
+      <AnimatePresence>
+        {showIOSDetails && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.95, opacity: 0 }}
+              className="glass max-w-sm rounded-2xl border border-white/10 p-5 w-full relative"
+            >
+              <h3 className="font-display text-base font-bold text-foreground">
+                Install SMART WATT
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1">
+                Access your premium NoskyTech smart-home controls directly from your home screen as
+                a standalone application.
+              </p>
+              <ol className="mt-4 space-y-3 text-xs text-foreground">
+                <li className="flex items-start gap-2.5">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+                    1
+                  </span>
+                  <span>Open Safari browser on your iPhone or iPad.</span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+                    2
+                  </span>
+                  <span>
+                    Tap the <strong className="text-foreground">Share</strong> icon{" "}
+                    <Share className="inline h-3.5 w-3.5 mx-0.5 align-middle" /> in the browser
+                    navigation bar.
+                  </span>
+                </li>
+                <li className="flex items-start gap-2.5">
+                  <span className="grid h-5 w-5 shrink-0 place-items-center rounded-full bg-primary/15 text-[10px] font-bold text-primary">
+                    3
+                  </span>
+                  <span>
+                    Scroll down and select{" "}
+                    <strong className="text-foreground">Add to Home Screen</strong>{" "}
+                    <PlusSquare className="inline h-3.5 w-3.5 mx-0.5 align-middle" />.
+                  </span>
+                </li>
+              </ol>
+              <button
+                onClick={() => setShowIOSDetails(false)}
+                className="mt-5 w-full h-9 rounded-xl bg-primary text-xs font-semibold text-primary-foreground hover:brightness-110 transition-all"
+              >
+                Close instructions
+              </button>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <div className="mb-8 text-center">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-primary/40 bg-primary/10 text-primary shadow-glow">
           <Zap className="h-6 w-6" strokeWidth={2.2} />
@@ -191,11 +322,51 @@ function SmartWattPage() {
   const [sending, setSending] = useState(false);
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [realtimeOk, setRealtimeOk] = useState(false);
+  const [isOnline, setIsOnline] = useState(true);
   const [legal, setLegal] = useState<LegalDoc["id"] | null>(null);
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cmdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCmdRef = useRef<{ desired: boolean; at: number } | null>(null);
+
+  // Offline Monitoring and Local Cache Loading
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const updateOnlineStatus = () => {
+      const online = navigator.onLine;
+      setIsOnline(online);
+
+      if (!online) {
+        // Automatically switch device view to offline cached state
+        try {
+          const cached = localStorage.getItem("sw.last_device_state");
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            setStatus({ kind: "ready", device: parsed });
+          }
+        } catch (e) {
+          console.error("Error reading cached state", e);
+        }
+      } else {
+        // Re-established network, fetch fresh
+        if (session) {
+          fetchDevice();
+        }
+      }
+    };
+
+    window.addEventListener("online", updateOnlineStatus);
+    window.addEventListener("offline", updateOnlineStatus);
+
+    // Initial check
+    updateOnlineStatus();
+
+    return () => {
+      window.removeEventListener("online", updateOnlineStatus);
+      window.removeEventListener("offline", updateOnlineStatus);
+    };
+  }, [session]);
 
   // Session tracking
   useEffect(() => {
@@ -213,6 +384,21 @@ function SmartWattPage() {
   }, []);
 
   async function fetchDevice() {
+    // If browser is offline, don't execute network request
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setIsOnline(false);
+      try {
+        const cached = localStorage.getItem("sw.last_device_state");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setStatus({ kind: "ready", device: parsed });
+        }
+      } catch (e) {
+        /* noop */
+      }
+      return;
+    }
+
     const { data, error } = await supabase
       .from("smart_watt_devices")
       .select("*")
@@ -229,6 +415,14 @@ function SmartWattPage() {
       setStatus({ kind: "missing" });
       return;
     }
+
+    // Cache successful device state locally for offline fallback
+    try {
+      localStorage.setItem("sw.last_device_state", JSON.stringify(data));
+    } catch {
+      /* noop */
+    }
+
     setStatus({ kind: "ready", device: data as SmartWattDevice });
   }
 
@@ -236,39 +430,61 @@ function SmartWattPage() {
   useEffect(() => {
     if (!supabaseConfigured || !session) return;
     let cancelled = false;
-    fetchDevice();
 
-    const channel = supabase
-      .channel(`smart_watt_${DEVICE_CODE}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "smart_watt_devices",
-          filter: `device_code=eq.${DEVICE_CODE}`,
-        },
-        (payload) => {
-          if (cancelled) return;
-          const next = payload.new as SmartWattDevice | undefined;
-          if (next && next.device_code === DEVICE_CODE) {
-            setStatus({ kind: "ready", device: next });
+    // Only establish live connections if online
+    if (navigator.onLine) {
+      fetchDevice();
+
+      const channel = supabase
+        .channel(`smart_watt_${DEVICE_CODE}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "*",
+            schema: "public",
+            table: "smart_watt_devices",
+            filter: `device_code=eq.${DEVICE_CODE}`,
+          },
+          (payload) => {
+            if (cancelled) return;
+            const next = payload.new as SmartWattDevice | undefined;
+            if (next && next.device_code === DEVICE_CODE) {
+              setStatus({ kind: "ready", device: next });
+              // Cache live changes
+              try {
+                localStorage.setItem("sw.last_device_state", JSON.stringify(next));
+              } catch {
+                /* noop */
+              }
+            }
+          },
+        )
+        .subscribe((state) => {
+          if (state === "SUBSCRIBED") {
+            setRealtimeOk(true);
+            if (pollRef.current) {
+              clearInterval(pollRef.current);
+              pollRef.current = null;
+            }
+          } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
+            setRealtimeOk(false);
+            if (!pollRef.current) pollRef.current = setInterval(fetchDevice, 5000);
           }
-        },
-      )
-      .subscribe((state) => {
-        if (state === "SUBSCRIBED") {
-          setRealtimeOk(true);
-          if (pollRef.current) {
-            clearInterval(pollRef.current);
-            pollRef.current = null;
-          }
-        } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
-          setRealtimeOk(false);
-          if (!pollRef.current) pollRef.current = setInterval(fetchDevice, 5000);
+        });
+      channelRef.current = channel;
+    } else {
+      setRealtimeOk(false);
+      // Fetch from offline local cache immediately
+      try {
+        const cached = localStorage.getItem("sw.last_device_state");
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          setStatus({ kind: "ready", device: parsed });
         }
-      });
-    channelRef.current = channel;
+      } catch {
+        /* noop */
+      }
+    }
 
     return () => {
       cancelled = true;
@@ -303,6 +519,13 @@ function SmartWattPage() {
   async function sendDesired(next: boolean) {
     if (status.kind !== "ready") return;
     if (sending) return;
+
+    // Safety lock: Reject commands completely while offline
+    if (!navigator.onLine || !isOnline) {
+      setCmdError("You are offline. Device commands are unavailable until connection returns.");
+      return;
+    }
+
     if (status.device.desired_state === next && status.device.actual_state === next) {
       return;
     }
@@ -341,6 +564,31 @@ function SmartWattPage() {
   }
 
   /* -------- Gates -------- */
+
+  const pwa = usePWA();
+  const [dismissedDashboard, setDismissedDashboard] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("sw.dismiss_dashboard_install");
+      if (stored === "true") {
+        setDismissedDashboard(true);
+      }
+    } catch {
+      /* noop */
+    }
+  }, []);
+
+  const dismissDashboard = () => {
+    setDismissedDashboard(true);
+    try {
+      localStorage.setItem("sw.dismiss_dashboard_install", "true");
+    } catch {
+      /* noop */
+    }
+  };
+
+  const showInstallCard = pwa.isInstallable && !pwa.isStandalone && !dismissedDashboard;
 
   if (!supabaseConfigured) {
     return (
@@ -425,11 +673,89 @@ function SmartWattPage() {
 
       {dev && (
         <>
+          {/* Premium Glassmorphic Offline Banner */}
+          <AnimatePresence>
+            {!isOnline && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                className="rounded-2xl border border-warning/20 bg-warning/5 p-4 flex gap-3 overflow-hidden shadow-glow"
+              >
+                <AlertTriangle className="h-5 w-5 shrink-0 text-warning mt-0.5 animate-pulse-glow" />
+                <div>
+                  <p className="text-xs font-bold text-foreground">You are offline</p>
+                  <p className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
+                    Device commands are unavailable until connection returns. Displaying cached
+                    information from your secure storage shell.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {/* Dashboard Premium Install Card */}
+          <AnimatePresence>
+            {showInstallCard && (
+              <motion.section
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="glass rounded-3xl border border-primary/20 p-5 sm:p-6 relative overflow-hidden"
+              >
+                <button
+                  onClick={dismissDashboard}
+                  className="absolute right-4 top-4 text-muted-foreground hover:text-foreground transition-colors"
+                  aria-label="Dismiss"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                {/* Background glow flare */}
+                <div className="absolute top-0 right-0 w-48 h-48 bg-primary/10 rounded-full blur-3xl pointer-events-none -mr-12 -mt-12" />
+                <div className="flex gap-4 relative">
+                  <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl border border-primary/30 bg-primary/10 text-primary shadow-glow">
+                    <PlusSquare className="h-6 w-6" />
+                  </span>
+                  <div>
+                    <h3 className="font-display text-base font-bold text-foreground">
+                      Install SMART WATT
+                    </h3>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Open your devices faster and securely directly from your home screen.
+                    </p>
+                    <div className="mt-4 flex gap-3">
+                      <button
+                        onClick={async () => {
+                          const result = await pwa.triggerInstall();
+                          if (result) {
+                            dismissDashboard();
+                          }
+                        }}
+                        className="h-9 px-4 inline-flex items-center justify-center rounded-xl bg-primary text-xs font-semibold text-primary-foreground hover:brightness-110 transition-all shadow-glow"
+                      >
+                        Install Now
+                      </button>
+                      <button
+                        onClick={dismissDashboard}
+                        className="h-9 px-4 inline-flex items-center justify-center rounded-xl border border-white/5 bg-white/[0.03] text-xs font-semibold text-muted-foreground hover:text-foreground hover:bg-white/[0.06] transition-all"
+                      >
+                        Later
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </motion.section>
+            )}
+          </AnimatePresence>
+
           <motion.section
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.45 }}
-            className="glass rounded-3xl border border-white/10 p-5 sm:p-8"
+            className={cn(
+              "glass rounded-3xl border p-5 sm:p-8 transition-colors",
+              isOnline ? "border-white/10" : "border-warning/10 bg-warning/[0.01]",
+            )}
           >
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
@@ -442,50 +768,71 @@ function SmartWattPage() {
                 <p className="text-xs text-muted-foreground">Device code · {dev.device_code}</p>
               </div>
               <div className="flex flex-col items-end gap-1.5">
-                <StatusChip online={dev.online} />
+                <StatusChip online={isOnline ? dev.online : false} />
                 <span
                   className={cn(
                     "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium",
-                    realtimeOk
+                    isOnline && realtimeOk
                       ? "border-primary/30 bg-primary/10 text-primary"
                       : "border-warning/30 bg-warning/10 text-warning",
                   )}
                 >
-                  {realtimeOk ? <Cloud className="h-3 w-3" /> : <CloudOff className="h-3 w-3" />}
-                  {realtimeOk ? "Cloud realtime" : "Cloud polling"}
+                  {isOnline && realtimeOk ? (
+                    <Cloud className="h-3 w-3" />
+                  ) : (
+                    <CloudOff className="h-3 w-3" />
+                  )}
+                  {isOnline && realtimeOk ? "Cloud realtime" : "Cached fallback"}
                 </span>
               </div>
             </div>
 
-            <div className="mt-6">
-              <BulbVisual on={confirmedOn} pending={pending} online={dev.online} />
+            <div
+              className={cn(
+                "mt-6 transition-opacity duration-300",
+                !isOnline && "opacity-80 saturate-[0.85]",
+              )}
+            >
+              <BulbVisual
+                on={confirmedOn}
+                pending={pending}
+                online={isOnline ? dev.online : false}
+              />
             </div>
 
             <div className="mt-6 grid place-items-center">
               <button
                 onClick={togglePower}
-                disabled={sending || pending}
+                disabled={sending || pending || !isOnline}
                 aria-label={commandedOn ? "Turn Bulb OFF" : "Turn Bulb ON"}
                 className={cn(
                   "group relative inline-flex h-16 min-w-[220px] items-center justify-center gap-3 rounded-2xl px-8 text-sm font-semibold uppercase tracking-widest transition-all",
-                  "disabled:cursor-not-allowed disabled:opacity-70",
-                  confirmedOn
-                    ? "bg-white/90 text-[#07101F] shadow-glow hover:bg-white"
-                    : "bg-primary text-primary-foreground shadow-glow hover:brightness-110",
+                  "disabled:cursor-not-allowed disabled:opacity-50",
+                  !isOnline
+                    ? "bg-white/[0.04] text-muted-foreground border border-white/5"
+                    : confirmedOn
+                      ? "bg-white/90 text-[#07101F] shadow-glow hover:bg-white"
+                      : "bg-primary text-primary-foreground shadow-glow hover:brightness-110",
                 )}
               >
-                {sending || pending ? (
+                {!isOnline ? (
+                  <>
+                    <CloudOff className="h-5 w-5" />
+                    Offline State
+                  </>
+                ) : sending || pending ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <Power className="h-5 w-5" strokeWidth={2.4} />
                 )}
-                {sending
-                  ? "Sending…"
-                  : pending
-                    ? "Waiting…"
-                    : commandedOn
-                      ? "Turn Bulb OFF"
-                      : "Turn Bulb ON"}
+                {isOnline &&
+                  (sending
+                    ? "Sending…"
+                    : pending
+                      ? "Waiting…"
+                      : commandedOn
+                        ? "Turn Bulb OFF"
+                        : "Turn Bulb ON")}
               </button>
             </div>
 
@@ -497,12 +844,12 @@ function SmartWattPage() {
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <StateTile
-                label="Commanded state"
+                label={isOnline ? "Commanded state" : "Last commanded state"}
                 value={commandedOn ? "ON" : "OFF"}
                 active={commandedOn}
               />
               <StateTile
-                label="Confirmed physical state"
+                label={isOnline ? "Confirmed physical state" : "Last known state"}
                 value={confirmedOn ? "ON" : "OFF"}
                 active={confirmedOn}
               />
@@ -511,13 +858,20 @@ function SmartWattPage() {
             <div
               className={cn(
                 "mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm",
-                pending
-                  ? "border-warning/30 bg-warning/10 text-warning"
-                  : "border-success/30 bg-success/10 text-success",
+                !isOnline
+                  ? "border-warning/15 bg-warning/5 text-warning"
+                  : pending
+                    ? "border-warning/30 bg-warning/10 text-warning"
+                    : "border-success/30 bg-success/10 text-success",
               )}
             >
               <span className="inline-flex items-center gap-2 font-medium">
-                {pending ? (
+                {!isOnline ? (
+                  <>
+                    <CloudOff className="h-4 w-4" />
+                    Live Connection Unavailable
+                  </>
+                ) : pending ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
                     Waiting for device confirmation…
@@ -531,11 +885,11 @@ function SmartWattPage() {
               </span>
               <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
                 <Clock className="h-3.5 w-3.5" />
-                Last update {formatTime(dev.updated_at)}
+                {!isOnline ? "Last updated " : "Updated "} {formatTime(dev.updated_at)}
               </span>
             </div>
 
-            {!dev.online && (
+            {isOnline && !dev.online && (
               <p className="mt-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-xs text-warning">
                 Device Offline. Remote commands may remain pending until the device reconnects.
               </p>
