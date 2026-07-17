@@ -120,7 +120,7 @@ function RootShell({ children }: { children: ReactNode }) {
 }
 
 // ------------------------------------------------------------------
-// PREMIUM SPLASH SCREEN COMPONENT WITH HIGH-END GLOW EFFECTS
+// PREMIUM TESLA-INSPIRED SPLASH SCREEN WITH HIGH-END GLOW EFFECTS
 // ------------------------------------------------------------------
 interface SplashProps {
   onComplete: () => void;
@@ -128,117 +128,31 @@ interface SplashProps {
 
 function Splash({ onComplete }: SplashProps) {
   const [progress, setProgress] = useState(1);
-  const progressRef = useRef(1);
-  const [msg, setMsg] = useState("Initializing Smart Watt...");
   const [isFinishing, setIsFinishing] = useState(false);
 
-  // Use refs to store startup state and avoid re-triggering the timer effect
-  const startTimeRef = useRef(Date.now());
-  const authFinishedRef = useRef(false);
-
-  // Particle generator for the loading bar and cloud
-  const [loadingParticles, setLoadingParticles] = useState<
-    { id: number; left: number; delay: number }[]
-  >([]);
-  const [sparkParticles, setSparkParticles] = useState<
-    { id: number; top: number; left: number; delay: number; scale: number }[]
-  >([]);
-
-  // Monitor Supabase configuration and authentication resolving
   useEffect(() => {
-    if (supabaseConfigured) {
-      supabase.auth
-        .getSession()
-        .then(() => {
-          authFinishedRef.current = true;
-        })
-        .catch(() => {
-          authFinishedRef.current = true;
-        });
-    } else {
-      authFinishedRef.current = true;
-    }
-  }, []);
-
-  // Generate background/decorations once
-  useEffect(() => {
-    // Generate particles traveling inside loading bar
-    const particles = Array.from({ length: 12 }).map((_, i) => ({
-      id: i,
-      left: Math.random() * 100,
-      delay: Math.random() * 2,
-    }));
-    setLoadingParticles(particles);
-
-    // Generate small spark particles around cloud / connection path
-    const sparks = Array.from({ length: 10 }).map((_, i) => ({
-      id: i,
-      top: 32 + Math.random() * 10, // near cloud
-      left: 45 + Math.random() * 10, // near cloud
-      delay: Math.random() * 3,
-      scale: 0.4 + Math.random() * 0.6,
-    }));
-    setSparkParticles(sparks);
-  }, []);
-
-  // Smooth loading timing loop (runs once, reads from refs)
-  useEffect(() => {
-    const minDuration = 2800; // ~2.8 seconds target minimum
-
+    const duration = 2600; // 2.6 seconds to fill the bar
+    const step = 20; // update every 20ms
+    const increment = 100 / (duration / step);
     const interval = setInterval(() => {
-      const elapsed = Date.now() - startTimeRef.current;
-      const timePercent = Math.min(elapsed / minDuration, 1);
-      const isAuthFinished = authFinishedRef.current;
-
       setProgress((prev) => {
-        let next = prev;
-        if (prev >= 90) {
-          // If we reached ~90%, we only proceed to 100% if authFinished is true and we've met the minDuration
-          if (isAuthFinished && elapsed >= minDuration) {
-            if (prev >= 100) {
-              clearInterval(interval);
-              setIsFinishing(true);
-              next = 100;
-            } else {
-              // Rapid finish to 100
-              next = Math.min(prev + 2, 100);
-            }
-          } else {
-            // Keep subtle breathing active state around 90-95%
-            next = prev + (95 - prev) * 0.05;
-          }
-        } else {
-          // Smooth acceleration to 90%
-          const target = timePercent * 90;
-          next = prev + (target - prev) * 0.15;
+        const next = prev + increment;
+        if (next >= 100) {
+          clearInterval(interval);
+          setIsFinishing(true);
+          return 100;
         }
-        progressRef.current = next;
         return next;
       });
-
-      // Update initialization status message naturally mapped to events
-      if (elapsed < 600) {
-        setMsg("Initializing Smart Watt...");
-      } else if (elapsed < 1200) {
-        setMsg("Connecting...");
-      } else if (elapsed < 2000) {
-        setMsg("Checking session...");
-      } else if (progressRef.current >= 90 && !isAuthFinished) {
-        setMsg("Preparing dashboard...");
-      } else if (progressRef.current >= 95) {
-        setMsg("Almost ready...");
-      }
-    }, 50);
-
+    }, step);
     return () => clearInterval(interval);
   }, []);
 
-  // Handle final completion phase transitions
   useEffect(() => {
     if (isFinishing) {
       const t = setTimeout(() => {
         onComplete();
-      }, 800); // Allow brief intensification and transition before disappearing
+      }, 400); // 0.4s fade-out, completing the 3.0s total splash time
       return () => clearTimeout(t);
     }
   }, [isFinishing, onComplete]);
@@ -248,307 +162,74 @@ function Splash({ onComplete }: SplashProps) {
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.4, ease: "easeInOut" }}
-      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#07101F] overflow-hidden select-none"
+      className="fixed inset-0 z-[200] flex items-center justify-center bg-[#050101] overflow-hidden select-none"
     >
-      {/* 1. Ambient Glow behind the Image (Centered, soft, electric blue, radial, low opacity, breathing) */}
-      <div
-        className="absolute inset-0 pointer-events-none"
-        style={{
-          background:
-            "radial-gradient(circle 500px at 50% 50%, rgba(59, 130, 246, 0.12), transparent 70%)",
-        }}
-      >
+      {/* 1. Ambient Breathing Neon Red/Orange Glow behind the Image */}
+      <div className="absolute inset-0 pointer-events-none">
         <motion.div
           animate={{
-            opacity: [0.6, 1, 0.6],
-            scale: [1, 1.05, 1],
+            opacity: [0.4, 0.8, 0.4],
+            scale: [1, 1.1, 1],
           }}
           transition={{
-            duration: 5,
+            duration: 4,
             repeat: Infinity,
             ease: "easeInOut",
           }}
           className="w-full h-full"
           style={{
             background:
-              "radial-gradient(circle 400px at 50% 50%, rgba(59, 130, 246, 0.08), transparent 60%)",
+              "radial-gradient(circle 600px at 50% 50%, rgba(220, 38, 38, 0.15), rgba(249, 115, 22, 0.05) 50%, transparent 80%)",
           }}
         />
       </div>
 
-      {/* Main Container: Scales to 100% viewport height and centers itself on laptops, adapts safely to phone viewports */}
-      <div className="relative h-[100dvh] max-h-[100dvh] max-w-full aspect-[941/1672] flex items-center justify-center overflow-hidden">
-        {/* Main Artwork - 100% height, contained aspect ratio */}
+      {/* 2. Main Full-screen Cover Image */}
+      <div className="absolute inset-0 w-full h-full">
         <img
-          src="/splash-artwork.png"
-          alt="SMART WATT Official Splash Screen"
-          className="w-full h-full object-contain select-none pointer-events-none"
+          src="/tesla-splash.png"
+          alt="Tesla Splash Screen"
+          className="w-full h-full object-cover select-none pointer-events-none"
         />
+        {/* Soft dark vignette on the image edge to make full-screen look incredibly polished */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-black opacity-60 pointer-events-none" />
+      </div>
 
-        {/* OVERLAY ELEMENTS (Using analyzed precise percentages for coordinates) */}
-
-        {/* A. Cloud Icon Overlay (Center: 49.95%, 36.51% | Soft breathing blue glow, spark particles, subtle electric pulse) */}
-        <div
-          className="absolute pointer-events-none"
-          style={{
-            left: "49.95%",
-            top: "36.51%",
-            width: "48.67%",
-            height: "7.00%",
-            transform: "translate(-50%, -50%)",
+      {/* 3. Foreground Glow overlay on top of the image to make it pop */}
+      <div className="absolute inset-0 pointer-events-none mix-blend-screen">
+        <motion.div
+          animate={{
+            opacity: [0.2, 0.5, 0.2],
           }}
-        >
-            {/* Ambient Breathing Blue Glow */}
-            <motion.div
-              animate={{
-                opacity: [0.3, 0.75, 0.3],
-                scale: [0.95, 1.05, 0.95],
-              }}
-              transition={{
-                duration: 4,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute inset-0 rounded-full bg-blue-500/15 blur-xl"
-            />
+          transition={{
+            duration: 3,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          className="w-full h-full"
+          style={{
+            background:
+              "radial-gradient(circle 350px at 50% 50%, rgba(249, 115, 22, 0.25), transparent 70%)",
+          }}
+        />
+      </div>
 
-            {/* Subtle Electric Pulse */}
-            <motion.div
-              animate={{
-                opacity: [0.1, 0.4, 0.1],
-                scale: [0.9, 1.1, 0.9],
-              }}
-              transition={{
-                duration: 2.2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute inset-0 rounded-full border border-blue-400/20 blur-md"
-            />
-          </div>
-
-          {/* Tiny spark particles around Cloud area */}
-          {sparkParticles.map((spark) => (
-            <motion.div
-              key={spark.id}
-              className="absolute w-1 h-1 rounded-full bg-blue-300"
-              style={{
-                top: `${spark.top}%`,
-                left: `${spark.left}%`,
-              }}
-              animate={{
-                y: [0, -12, 0],
-                opacity: [0, 0.8, 0],
-                scale: [0, spark.scale, 0],
-              }}
-              transition={{
-                duration: 3,
-                repeat: Infinity,
-                delay: spark.delay,
-                ease: "easeInOut",
-              }}
-            />
-          ))}
-
-          {/* B. Blue Connection Lines (Center: 52%, 51.7% | Slow energy flow & soft bloom with premium feathering masks) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: "52.05%",
-              top: "51.68%",
-              width: "90%",
-              height: "25%",
-              transform: "translate(-50%, -50%)",
-              WebkitMaskImage:
-                "radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)",
-              maskImage:
-                "radial-gradient(ellipse at center, rgba(0,0,0,1) 50%, rgba(0,0,0,0) 100%)",
-            }}
-          >
-            {/* Soft Bloom Glow behind lines */}
-            <motion.div
-              animate={{
-                opacity: [0.2, 0.4, 0.2],
-              }}
-              transition={{
-                duration: 6,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute inset-0 bg-gradient-to-r from-blue-500/5 via-blue-400/10 to-blue-500/5 blur-2xl"
-            />
-
-            {/* Energy traveling light overlay (subtle animated line overlay) */}
-            <div className="absolute inset-0 overflow-hidden opacity-30">
-              <motion.div
-                animate={{
-                  x: ["-100%", "100%"],
-                }}
-                transition={{
-                  duration: 4,
-                  repeat: Infinity,
-                  ease: "linear",
-                }}
-                className="w-1/3 h-full bg-gradient-to-r from-transparent via-blue-400 to-transparent blur-md"
-              />
-            </div>
-          </div>
-
-          {/* C. Bulb Warm Amber Glow (Center: 69.89%, 57.25% | Realistic illumination around glass/filament, breathing, no flicker) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: "69.89%",
-              top: "57.25%",
-              width: "16%",
-              height: "10%",
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            {/* Core Filament Amber light */}
-            <motion.div
-              animate={{
-                opacity: [0.65, 0.85, 0.65],
-                scale: [0.98, 1.02, 0.98],
-              }}
-              transition={{
-                duration: 3.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute inset-0 rounded-full bg-amber-500/25 blur-md"
-            />
-
-            {/* Soft Outer Bloom */}
-            <motion.div
-              animate={{
-                opacity: [0.3, 0.5, 0.3],
-                scale: [0.95, 1.05, 0.95],
-              }}
-              transition={{
-                duration: 3.5,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute -inset-4 rounded-full bg-amber-600/15 blur-xl"
-            />
-          </div>
-
-          {/* D. Smart Watt Device Base / LED (Center: 49.95%, 83.64%, Status LED Center: 48.46%, 96.83%) */}
-          <div
-            className="absolute pointer-events-none"
-            style={{
-              left: "48.46%",
-              top: "96.83%",
-              width: "10px",
-              height: "10px",
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            {/* Tiny Blue Status LED Pulse */}
-            <motion.div
-              animate={{
-                opacity: [0.4, 1, 0.4],
-                scale: [0.8, 1.2, 0.8],
-              }}
-              transition={{
-                duration: 1.8,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute inset-0 rounded-full bg-blue-400"
-            />
-            {/* Gentle Outer Glow */}
-            <motion.div
-              animate={{
-                opacity: [0.2, 0.6, 0.2],
-              }}
-              transition={{
-                duration: 1.8,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="absolute -inset-2 rounded-full bg-blue-400/45 blur-xs"
-            />
-          </div>
-
-          {/* LOADING EXPERIENCE (Floating elegantly on top of the image artwork at bottom area ~14% from bottom) */}
-          <div className="absolute bottom-[14%] left-1/2 -translate-x-1/2 w-full max-w-[280px] px-4 flex flex-col items-center pointer-events-none">
-            {/* Glass-like Loading Bar Container */}
-            <div className="relative w-full h-[6px] rounded-full bg-white/[0.04] border border-white/[0.08] backdrop-blur-md overflow-hidden shadow-inner">
-              {/* Electric Blue Gradient Progress Fill with Outer Glow */}
-              <motion.div
-                className="absolute top-0 left-0 h-full bg-gradient-to-r from-blue-600 via-cyan-400 to-blue-500 rounded-full"
-                style={{ width: `${progress}%` }}
-                animate={
-                  isFinishing
-                    ? {
-                        boxShadow: ["0 0 4px #3b82f6", "0 0 12px #06b6d4", "0 0 4px #3b82f6"],
-                      }
-                    : {}
-                }
-                transition={{ duration: 0.8 }}
-              />
-
-              {/* Tiny traveling particles inside the loading bar */}
-              {progress < 100 &&
-                loadingParticles.map((pt) => (
-                  <motion.div
-                    key={pt.id}
-                    className="absolute top-0 w-[2px] h-full bg-blue-100/60 rounded-full"
-                    style={{ left: `${pt.left}%` }}
-                    animate={{
-                      x: ["0px", "120px"],
-                      opacity: [0, 0.8, 0],
-                    }}
-                    transition={{
-                      duration: 2,
-                      repeat: Infinity,
-                      delay: pt.delay,
-                      ease: "linear",
-                    }}
-                  />
-                ))}
-
-              {/* Soft outer glow & subtle reflection overlay */}
-              <div className="absolute inset-0 bg-gradient-to-b from-white/[0.1] to-transparent pointer-events-none" />
-            </div>
-
-            {/* Gently pulsing loading glow indicator */}
-            <motion.div
-              animate={{
-                opacity: isFinishing ? [0.4, 0.9, 0.4] : [0.2, 0.5, 0.2],
-              }}
-              transition={{
-                duration: 2,
-                repeat: Infinity,
-                ease: "easeInOut",
-              }}
-              className="w-full h-[1px] bg-cyan-400/40 blur-xs mt-0.5"
-            />
-
-            {/* Numeric loading counter - smoothly incrementing 1 to 100 */}
-            <div className="mt-3 font-display text-xs font-semibold tracking-wider text-cyan-400/80">
-              {Math.round(progress)}%
-            </div>
-
-            {/* INITIALIZATION STATUS: Minimal, cleanly faded message cycle */}
-            <div className="h-6 mt-2 flex items-center justify-center">
-              <AnimatePresence mode="wait">
-                <motion.p
-                  key={msg}
-                  initial={{ opacity: 0, y: 4 }}
-                  animate={{ opacity: 0.7, y: 0 }}
-                  exit={{ opacity: 0, y: -4 }}
-                  transition={{ duration: 0.35, ease: "easeInOut" }}
-                  className="text-[11px] tracking-[0.18em] text-muted-foreground uppercase text-center"
-                >
-                  {msg}
-                </motion.p>
-              </AnimatePresence>
-            </div>
-          </div>
+      {/* Sleeker, Ultra-minimalist Loading bar & Counter */}
+      <div className="absolute bottom-[10%] left-1/2 -translate-x-1/2 w-full max-w-[240px] px-4 flex flex-col items-center pointer-events-none z-10">
+        {/* Glass-like Ultra-sleek Loading Bar Container (Height 3px) */}
+        <div className="relative w-full h-[3px] rounded-full bg-white/[0.04] border border-white/[0.05] overflow-hidden backdrop-blur-sm">
+          {/* Neon orange-to-red gradient progress fill with outer glow */}
+          <motion.div
+            className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-600 via-red-500 to-amber-500 rounded-full shadow-[0_0_10px_#f97316]"
+            style={{ width: `${progress}%` }}
+          />
         </div>
+
+        {/* Minimal percentage counter - matching neon color scheme */}
+        <div className="mt-3 font-display text-[10px] font-bold tracking-[0.2em] text-orange-500/90 filter drop-shadow-[0_0_4px_rgba(249,115,22,0.4)]">
+          {Math.round(progress)}%
+        </div>
+      </div>
     </motion.div>
   );
 }
