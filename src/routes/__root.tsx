@@ -16,6 +16,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -146,16 +147,21 @@ function Splash({ onComplete }: SplashProps) {
 
   // Monitor Supabase configuration and authentication resolving
   useEffect(() => {
+    console.log("SPLASH: Monitoring Supabase configuration...");
     if (supabaseConfigured) {
+      console.log("SPLASH: Supabase is configured. Getting session...");
       supabase.auth
         .getSession()
-        .then(() => {
+        .then((res) => {
+          console.log("SPLASH: Session resolved successfully:", res);
           authFinishedRef.current = true;
         })
-        .catch(() => {
+        .catch((err) => {
+          console.error("SPLASH: Session catch error:", err);
           authFinishedRef.current = true;
         });
     } else {
+      console.log("SPLASH: Supabase is NOT configured.");
       authFinishedRef.current = true;
     }
   }, []);
@@ -189,20 +195,25 @@ function Splash({ onComplete }: SplashProps) {
       const elapsed = Date.now() - startTimeRef.current;
       const timePercent = Math.min(elapsed / minDuration, 1);
       const isAuthFinished = authFinishedRef.current;
+      const currentProgress = progressRef.current;
+
+      if (currentProgress % 10 === 0 || currentProgress > 85) {
+        console.log(`SPLASH PROGRESS TICK: ${currentProgress}%, auth: ${isAuthFinished}, elapsed: ${elapsed}ms`);
+      }
+
+      if (currentProgress >= 100) {
+        console.log("SPLASH DONE: Progress reached 100%. Finializing splash...");
+        clearInterval(interval);
+        setIsFinishing(true);
+        return;
+      }
 
       setProgress((prev) => {
         let next = prev;
-        if (prev >= 90) {
-          // If we reached ~90%, we only proceed to 100% if authFinished is true and we've met the minDuration
+        if (prev >= 89) {
+          // If we reached ~89%, we only proceed to 100% if authFinished is true and we've met the minDuration
           if (isAuthFinished && elapsed >= minDuration) {
-            if (prev >= 100) {
-              clearInterval(interval);
-              setIsFinishing(true);
-              next = 100;
-            } else {
-              // Rapid finish to 100
-              next = Math.min(prev + 2, 100);
-            }
+            next = Math.min(prev + 2, 100);
           } else {
             // Keep subtle breathing active state around 90-95%
             next = prev + (95 - prev) * 0.05;
@@ -664,6 +675,7 @@ function RootComponent() {
           <Outlet />
         </main>
         <BottomNav />
+        <Toaster />
       </div>
     </QueryClientProvider>
   );
