@@ -95,6 +95,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
     ],
     links: [
+      { rel: "preload", href: "/tesla-splash.webp", as: "image", type: "image/webp" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -136,7 +137,7 @@ function Splash({ onComplete }: SplashProps) {
   const [isFinishing, setIsFinishing] = useState(false);
 
   useEffect(() => {
-    const duration = 2600; // 2.6 seconds to fill the bar
+    const duration = 6000; // 6.0 seconds to fill the bar
     const step = 20; // update every 20ms
     const increment = 100 / (duration / step);
     const interval = setInterval(() => {
@@ -157,7 +158,7 @@ function Splash({ onComplete }: SplashProps) {
     if (isFinishing) {
       const t = setTimeout(() => {
         onComplete();
-      }, 400); // 0.4s fade-out, completing the 3.0s total splash time
+      }, 400); // 0.4s fade-out, completing the total splash duration (6.0s progress + 0.4s fade)
       return () => clearTimeout(t);
     }
   }, [isFinishing, onComplete]);
@@ -192,7 +193,7 @@ function Splash({ onComplete }: SplashProps) {
       {/* 2. Main Full-screen Cover Image */}
       <div className="absolute inset-0 w-full h-full">
         <img
-          src="/tesla-splash.png"
+          src="/tesla-splash.webp"
           alt="Tesla Splash Screen"
           className="w-full h-full object-cover select-none pointer-events-none"
         />
@@ -379,15 +380,8 @@ function RootComponent() {
       </div>
 
       {/* Global Cypher Assistant components */}
-      <CypherFloatingButton
-        cypher={cypher}
-        onClick={() => setIsDrawerOpen(true)}
-      />
-      <CypherDrawer
-        isOpen={isDrawerOpen}
-        onClose={() => setIsDrawerOpen(false)}
-        cypher={cypher}
-      />
+      <CypherFloatingButton cypher={cypher} onClick={() => setIsDrawerOpen(true)} />
+      <CypherDrawer isOpen={isDrawerOpen} onClose={() => setIsDrawerOpen(false)} cypher={cypher} />
     </QueryClientProvider>
   );
 }

@@ -1,6 +1,15 @@
 import { useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { X, Trash2, Sliders, Info, MessageSquare, ExternalLink, Settings, ShieldAlert } from "lucide-react";
+import {
+  X,
+  Trash2,
+  Sliders,
+  Info,
+  MessageSquare,
+  ExternalLink,
+  Settings,
+  ShieldAlert,
+} from "lucide-react";
 import { UseCypherReturn } from "../hooks/useCypher";
 import { cypherHistoryService } from "../history/historyService";
 import { QuickSettings } from "./QuickSettings";
@@ -13,7 +22,15 @@ interface CypherDrawerProps {
 }
 
 export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
-  const { state, history, statusMessage, transcript, interimTranscript, settings, followUpCountdown } = cypher;
+  const {
+    state,
+    history,
+    statusMessage,
+    transcript,
+    interimTranscript,
+    settings,
+    followUpCountdown,
+  } = cypher;
   const historyEndRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -53,7 +70,10 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-75" />
               <span className="relative inline-flex h-3 w-3 rounded-full bg-primary" />
             </span>
-            <h2 id="cypher-title" className="font-display text-sm font-bold tracking-widest text-foreground">
+            <h2
+              id="cypher-title"
+              className="font-display text-sm font-bold tracking-widest text-foreground"
+            >
               CYPHER VOICE LAYER
             </h2>
           </div>
@@ -70,10 +90,18 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
         <main className="flex-1 overflow-y-auto p-4 space-y-6 sm:p-6 scrollbar-thin">
           {/* Active Listening / Speaking Banner */}
           <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-3 relative overflow-hidden">
-            <div className="absolute top-0 right-0 h-20 w-20 pointer-events-none" style={{ background: "radial-gradient(circle at top right, rgba(249,115,22,0.1), transparent 70%)" }} />
+            <div
+              className="absolute top-0 right-0 h-20 w-20 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(circle at top right, rgba(249,115,22,0.1), transparent 70%)",
+              }}
+            />
 
             <div className="flex items-center justify-between">
-              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Active Session</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-primary">
+                Active Session
+              </p>
               {followUpCountdown !== null && (
                 <span className="inline-flex items-center gap-1.5 rounded-full bg-orange-500/20 px-2 py-0.5 text-[10px] font-semibold text-orange-500">
                   Follow-up: {followUpCountdown}s
@@ -88,8 +116,15 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
               {(transcript || interimTranscript) && (
                 <div className="rounded-xl bg-black/40 p-2.5 border border-white/5">
                   <p className="text-xs text-muted-foreground leading-relaxed">
-                    {transcript && <span className="text-foreground font-medium">"{transcript}"</span>}
-                    {interimTranscript && <span className="text-muted-foreground/80 italic"> {interimTranscript}...</span>}
+                    {transcript && (
+                      <span className="text-foreground font-medium">"{transcript}"</span>
+                    )}
+                    {interimTranscript && (
+                      <span className="text-muted-foreground/80 italic">
+                        {" "}
+                        {interimTranscript}...
+                      </span>
+                    )}
                   </p>
                 </div>
               )}
@@ -103,7 +138,7 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
             </div>
 
             {/* Stop Action Bar */}
-            {(state !== "sleeping" && state !== "offline") && (
+            {state !== "sleeping" && state !== "offline" && (
               <div className="flex justify-end pt-1">
                 <button
                   onClick={() => cypher.handleStop()}
@@ -141,20 +176,34 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
             ) : (
               <div className="space-y-2.5 max-h-[16rem] overflow-y-auto pr-1">
                 {history.map((it) => (
-                  <div key={it.id} className="rounded-xl border border-white/5 bg-background/30 p-3 flex justify-between gap-4">
+                  <div
+                    key={it.id}
+                    className="rounded-xl border border-white/5 bg-background/30 p-3 flex justify-between gap-4"
+                  >
                     <div className="space-y-1 min-w-0 flex-1">
                       <p className="text-xs font-medium text-foreground truncate">"{it.command}"</p>
-                      <p className="text-[10px] text-muted-foreground leading-relaxed">{it.result}</p>
+                      <p className="text-[10px] text-muted-foreground leading-relaxed">
+                        {it.result}
+                      </p>
                     </div>
                     <div className="text-right shrink-0">
-                      <span className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold ${
-                        it.status === "Completed" ? "bg-success/15 text-success" :
-                        it.status === "Answered" ? "bg-primary/15 text-primary" : "bg-destructive/15 text-destructive"
-                      }`}>
+                      <span
+                        className={`inline-flex rounded-full px-2 py-0.5 text-[9px] font-semibold ${
+                          it.status === "Completed"
+                            ? "bg-success/15 text-success"
+                            : it.status === "Answered"
+                              ? "bg-primary/15 text-primary"
+                              : "bg-destructive/15 text-destructive"
+                        }`}
+                      >
                         {it.status}
                       </span>
                       <p className="mt-1 text-[8px] text-muted-foreground">
-                        {new Date(it.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                        {new Date(it.timestamp).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                          second: "2-digit",
+                        })}
                       </p>
                     </div>
                   </div>
@@ -190,7 +239,10 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
             <p className="text-[10px] text-muted-foreground leading-relaxed flex gap-2">
               <ShieldAlert className="h-4 w-4 shrink-0 text-primary" />
               <span>
-                <strong>Privacy Disclosure:</strong> When Always-On Listening is enabled, Cypher keeps the microphone active during the current supported app session to detect its wake phrase. Browser and operating-system restrictions may stop listening in the background. Raw microphone recordings are never stored by default.
+                <strong>Privacy Disclosure:</strong> When Always-On Listening is enabled, Cypher
+                keeps the microphone active during the current supported app session to detect its
+                wake phrase. Browser and operating-system restrictions may stop listening in the
+                background. Raw microphone recordings are never stored by default.
               </span>
             </p>
           </div>

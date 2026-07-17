@@ -38,7 +38,10 @@ export const cypherSettingsService = {
     // Synced fields with pre-existing legacy settings keys if any
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(updated));
-      localStorage.setItem("sw.voice", updated.listeningMode === "always_on" || updated.alwaysOnListening ? "on" : "on");
+      localStorage.setItem(
+        "sw.voice",
+        updated.listeningMode === "always_on" || updated.alwaysOnListening ? "on" : "on",
+      );
       localStorage.setItem("sw.speech", updated.voiceResponses ? "on" : "off");
     } catch (e) {
       console.error("[CypherSettings] Failed to save settings", e);

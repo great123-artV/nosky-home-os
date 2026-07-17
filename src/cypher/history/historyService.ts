@@ -19,7 +19,12 @@ export const cypherHistoryService = {
     return [];
   },
 
-  addHistoryItem(command: string, intent: CypherIntent, result: string, status: HistoryItem["status"]): HistoryItem[] {
+  addHistoryItem(
+    command: string,
+    intent: CypherIntent,
+    result: string,
+    status: HistoryItem["status"],
+  ): HistoryItem[] {
     const current = this.getHistory();
     const newItem: HistoryItem = {
       id: Math.random().toString(36).substring(2, 9),

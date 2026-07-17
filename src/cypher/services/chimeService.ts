@@ -39,7 +39,7 @@ export const chimeService = {
       masterGain.connect(destination);
 
       // We play 3 premium, soft sine wave notes in sequence
-      const notes = [392.00, 523.25, 659.25]; // G4, C5, E5 (pleasant major chord progression)
+      const notes = [392.0, 523.25, 659.25]; // G4, C5, E5 (pleasant major chord progression)
       const noteStarts = [0, 0.1, 0.2];
       const noteDurations = [0.4, 0.45, 0.5];
 
@@ -55,7 +55,10 @@ export const chimeService = {
         // Smooth individual envelope
         noteGain.gain.setValueAtTime(0, now + noteStarts[idx]);
         noteGain.gain.linearRampToValueAtTime(0.3, now + noteStarts[idx] + 0.03);
-        noteGain.gain.exponentialRampToValueAtTime(0.0001, now + noteStarts[idx] + noteDurations[idx]);
+        noteGain.gain.exponentialRampToValueAtTime(
+          0.0001,
+          now + noteStarts[idx] + noteDurations[idx],
+        );
 
         osc.connect(noteGain);
         noteGain.connect(masterGain);
@@ -63,9 +66,11 @@ export const chimeService = {
         osc.start(now + noteStarts[idx]);
         osc.stop(now + noteStarts[idx] + noteDurations[idx]);
       });
-
     } catch (e) {
-      console.warn("[ChimeService] Web Audio API chime could not play due to user gesture requirement or engine failure.", e);
+      console.warn(
+        "[ChimeService] Web Audio API chime could not play due to user gesture requirement or engine failure.",
+        e,
+      );
     }
-  }
+  },
 };

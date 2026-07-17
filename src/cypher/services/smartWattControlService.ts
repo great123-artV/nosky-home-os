@@ -82,7 +82,7 @@ export const smartWattControlService = {
                 finish(true);
               }
             }
-          }
+          },
         )
         .subscribe((status) => {
           if (status !== "SUBSCRIBED") {
@@ -101,5 +101,5 @@ export const smartWattControlService = {
           }
         });
     });
-  }
+  },
 };

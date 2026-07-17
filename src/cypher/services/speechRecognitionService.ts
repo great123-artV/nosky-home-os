@@ -22,10 +22,13 @@ export class SpeechRecognitionService {
   private retryCount: number = 0;
   private maxRetries: number = 5;
 
-  constructor(callbacks: SpeechRecognitionEvents, config?: { isAlwaysOn?: boolean; wakePhrases?: string[]; lang?: string }) {
+  constructor(
+    callbacks: SpeechRecognitionEvents,
+    config?: { isAlwaysOn?: boolean; wakePhrases?: string[]; lang?: string },
+  ) {
     this.callbacks = callbacks;
     this.isAlwaysOn = config?.isAlwaysOn ?? false;
-    this.wakePhrases = config?.wakePhrases?.map(p => p.toLowerCase()) ?? ["hey cypher", "cypher"];
+    this.wakePhrases = config?.wakePhrases?.map((p) => p.toLowerCase()) ?? ["hey cypher", "cypher"];
     this.lang = config?.lang ?? "en-NG";
 
     if (activeInstance) {
@@ -115,7 +118,10 @@ export class SpeechRecognitionService {
 
     if (this.retryCount > this.maxRetries) {
       this.callbacks.onStateChange("paused_access");
-      this.callbacks.onError("paused_access", "Cypher paused because the browser stopped microphone access.");
+      this.callbacks.onError(
+        "paused_access",
+        "Cypher paused because the browser stopped microphone access.",
+      );
       return;
     }
 
