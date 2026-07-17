@@ -3,17 +3,18 @@ import { CypherState, CypherIntent, CypherSettings, HistoryItem } from "../types
 import { cypherSettingsService } from "../settings/settingsService";
 import { cypherHistoryService } from "../history/historyService";
 import { parseCypherIntent } from "../intents/cypherIntentRouter";
-import {
-  speechRecognitionService,
-  SpeechRecognitionService,
-} from "../services/speechRecognitionService";
-import { elevenLabsSpeechService } from "../services/elevenLabsSpeechService";
-import { chimeService } from "../services/chimeService";
+import { useSessionContext } from "../context/SessionContext";
+import { deviceControlEngine } from "../services/deviceControlEngine";
 import { cypherKnowledgeService } from "../services/cypherKnowledgeService";
-import { smartWattControlService } from "../services/smartWattControlService";
-import { supabase } from "@/lib/supabase";
+import { navigationEngine } from "../services/navigationEngine";
+import { responseEngine } from "../services/responseEngine";
+import { audioEngine } from "../services/audioEngine";
+import { useRouter } from "@tanstack/react-router";
 
-export function useCypher(isAuthenticated: boolean) {
+export function useCypher() {
+  const sessionCtx = useSessionContext();
+  const router = useRouter();
+
   const [settings, setSettings] = useState<CypherSettings>(() =>
     cypherSettingsService.getSettings(),
   );
@@ -27,12 +28,11 @@ export function useCypher(isAuthenticated: boolean) {
   const [statusMessage, setStatusMessage] = useState("Sleeping");
   const [followUpCountdown, setFollowUpCountdown] = useState<number | null>(null);
 
-  const recognitionRef = useRef<SpeechRecognitionService | null>(null);
   const isExecutingRef = useRef(false);
   const followUpTimerRef = useRef<any>(null);
   const countdownIntervalRef = useRef<any>(null);
 
-  // Keep a ref of state to avoid React stale closure issues in the continuous listener callbacks
+  // Keep state reference up-to-date
   const stateRef = useRef<CypherState>("sleeping");
   useEffect(() => {
     stateRef.current = state;
@@ -48,78 +48,128 @@ export function useCypher(isAuthenticated: boolean) {
     };
   }, []);
 
-  // Shutdown voice engines
-  const terminateVoiceEngines = useCallback(() => {
-    if (recognitionRef.current) {
-      recognitionRef.current.destroy();
-      recognitionRef.current = null;
+  // Set initial status message depending on auth state
+  useEffect(() => {
+    if (sessionCtx.authStatus === "initializing") {
+      setState("sleeping");
+      setStatusMessage("Restoring your SMART WATT session…");
+    } else {
+      if (stateRef.current === "sleeping") {
+        setStatusMessage("Sleeping");
+      }
     }
-    elevenLabsSpeechService.stop();
+  }, [sessionCtx.authStatus]);
+
+  // Shutdown voice engines completely
+  const terminateVoiceEngines = useCallback(() => {
+    audioEngine.stopSpeechRecognition();
+    audioEngine.stopPlayback();
     if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
     setFollowUpCountdown(null);
     isExecutingRef.current = false;
-  }, []);
+    sessionCtx.setSpeechRecognitionActive(false);
+  }, [sessionCtx]);
 
-  // Stop / Cancel Current Action
+  // Stop / Cancel active actions
   const handleStop = useCallback(() => {
-    elevenLabsSpeechService.stop();
+    audioEngine.stopPlayback();
     setState("sleeping");
     setStatusMessage("Sleeping");
     terminateVoiceEngines();
 
-    // If always-on is enabled, reset it back to sleeping (listening for wake word)
     if (settings.alwaysOnListening) {
       initiateSpeechRecognition();
     }
   }, [settings.alwaysOnListening, terminateVoiceEngines]);
 
-  // Execute actual intent
+  // Unified voice/text intent executor
   const executeIntent = useCallback(
     async (intent: CypherIntent, rawText: string) => {
       if (isExecutingRef.current) {
         setStatusMessage("Please wait while I complete the current command.");
-        await elevenLabsSpeechService.speak(
+        await audioEngine.speak(
           "Please wait while I complete the current command.",
-          (v) => setActiveVoiceMode(v),
+          (v) => {
+            if (v === "playing") setActiveVoiceMode("playing");
+            else if (v === "stopped" || v === "failed") setActiveVoiceMode("none");
+          }
         );
         return;
       }
+
       isExecutingRef.current = true;
       setState("processing");
       setStatusMessage("Understanding command…");
 
-      // Helper to log and output speech response
-      const respond = async (
-        text: string,
+      const handleResponseOutput = async (
+        spokenText: string,
+        uiText: string,
         histStatus: HistoryItem["status"],
         histResult: string,
       ) => {
         setState("speaking");
-        setStatusMessage("Speaking…");
+        setStatusMessage(uiText);
         cypherHistoryService.addHistoryItem(rawText, intent, histResult, histStatus);
-        await elevenLabsSpeechService.speak(text, (v) => setActiveVoiceMode(v));
-        isExecutingRef.current = false;
 
-        // Post-response action: follow-up window (10 seconds)
+        await audioEngine.speak(spokenText, (v) => {
+          if (v === "playing") setActiveVoiceMode("playing");
+          else if (v === "stopped" || v === "failed") setActiveVoiceMode("none");
+        });
+
+        isExecutingRef.current = false;
         startFollowUpWindow();
       };
 
-      // Before login restrictions
-      if (!isAuthenticated) {
-        const authRequiredIntents: CypherIntent[] = [
-          "TURN_ON",
-          "TURN_OFF",
-          "GET_BULB_STATUS",
-          "GET_DEVICE_STATUS",
-        ];
-        if (authRequiredIntents.includes(intent)) {
-          const msg = cypherKnowledgeService.getPreLoginControlAttemptMessage();
-          await respond(msg, "Failed", "Access Denied (Pre-login)");
-          return;
-        }
+      // Restoring protection gate: Block commands during session loading
+      if (sessionCtx.authStatus === "initializing") {
+        await handleResponseOutput(
+          "Restoring your SMART WATT session...",
+          "Restoring your SMART WATT session...",
+          "Failed",
+          "Session Initializing"
+        );
+        return;
       }
 
+      // Pre-login protection gates for hardware controls
+      const authRequiredIntents: CypherIntent[] = [
+        "TURN_ON",
+        "TURN_OFF",
+        "GET_BULB_STATUS",
+        "GET_DEVICE_STATUS",
+        "REFRESH_DEVICE",
+      ];
+
+      if (authRequiredIntents.includes(intent) && !sessionCtx.isAuthenticated) {
+        const msg = cypherKnowledgeService.getPreLoginControlAttemptMessage();
+        const outputs = responseEngine.generateResponse(intent, "failure", {
+          errorMsg: msg,
+        });
+        await handleResponseOutput(
+          outputs.spokenText,
+          outputs.uiText,
+          "Failed",
+          "Access Denied (Unauthenticated)"
+        );
+        return;
+      }
+
+      // Handle Cancel / Stop Intents
+      if (intent === "STOP" || intent === "CANCEL") {
+        setState("sleeping");
+        setStatusMessage("Sleeping");
+        audioEngine.stopPlayback();
+        isExecutingRef.current = false;
+        if (settings.alwaysOnListening) {
+          initiateSpeechRecognition(false);
+        } else {
+          terminateVoiceEngines();
+        }
+        return;
+      }
+
+      // Subsystem Routers
       switch (intent) {
         case "TURN_ON":
         case "TURN_OFF": {
@@ -127,190 +177,156 @@ export function useCypher(isAuthenticated: boolean) {
           setState("executing");
           setStatusMessage(turnOn ? "Turning on the bulb…" : "Turning off the bulb…");
 
-          // 1. Check if device is online
-          const device = await smartWattControlService.getDevice();
-          if (!device) {
-            const msg = "I couldn't reach the server. Please check your connection.";
-            await respond(msg, "Failed", "Network Error");
-            return;
-          }
-
-          if (!device.online) {
-            const msg = cypherKnowledgeService.getOfflineDeviceMessage();
-            await respond(msg, "Failed", "Device Offline");
-            return;
-          }
-
-          // 2. Set desired state
-          const { success, error } = await smartWattControlService.setDesiredState(turnOn);
-          if (!success) {
-            const msg = `Failed to send command. ${error || ""}`;
-            await respond(msg, "Failed", "Relay Command Failed");
-            return;
-          }
-
-          // 3. Wait for actual_state confirmation
-          setStatusMessage("Waiting for device confirmation…");
-          const confirmed = await smartWattControlService.waitForDeviceConfirmation(turnOn);
-          if (confirmed) {
-            const msg = turnOn ? "The bulb is now on." : "The bulb is now off.";
-            await respond(msg, "Completed", turnOn ? "Bulb ON" : "Bulb OFF");
-          } else {
-            const msg = cypherKnowledgeService.getNoConfirmationMessage();
-            await respond(msg, "Failed", "Confirmation Timeout");
-          }
+          const res = await deviceControlEngine.executeBulbCommand(turnOn, sessionCtx);
+          await handleResponseOutput(
+            res.responseMessage,
+            res.responseMessage,
+            res.success ? "Completed" : "Failed",
+            res.success ? (turnOn ? "Bulb ON" : "Bulb OFF") : (res.error || "Execution Error")
+          );
           break;
         }
 
         case "GET_BULB_STATUS": {
-          const device = await smartWattControlService.getDevice();
-          if (!device) {
-            await respond(
-              "I couldn't read the bulb status right now.",
-              "Failed",
-              "Error reading state",
-            );
-            return;
-          }
-          const stateStr = device.actual_state ? "on" : "off";
-          await respond(
-            `The bulb is currently ${stateStr}.`,
+          const outputs = responseEngine.generateResponse(intent, "success", {
+            actualState: sessionCtx.actualState,
+          });
+          await handleResponseOutput(
+            outputs.spokenText,
+            outputs.uiText,
             "Answered",
-            `Bulb is ${stateStr.toUpperCase()}`,
+            `Bulb state is ${sessionCtx.actualState ? "ON" : "OFF"}`
           );
           break;
         }
 
         case "GET_DEVICE_STATUS": {
-          const device = await smartWattControlService.getDevice();
-          if (!device) {
-            await respond("I couldn't reach the device status.", "Failed", "Network error");
-            return;
-          }
-          const statusStr = device.online ? "online" : "offline";
-          await respond(
-            `The device is ${statusStr}.`,
+          const outputs = responseEngine.generateResponse(intent, "success", {
+            deviceOnline: sessionCtx.deviceOnline,
+          });
+          await handleResponseOutput(
+            outputs.spokenText,
+            outputs.uiText,
             "Answered",
-            `Device is ${statusStr.toUpperCase()}`,
+            `Device online: ${sessionCtx.deviceOnline}`
           );
           break;
         }
 
-        case "OPEN_SETTINGS": {
-          window.location.assign("/settings");
-          await respond("Opening settings.", "Completed", "Settings Opened");
-          break;
-        }
-
-        case "HELP": {
-          await respond(
-            "I can turn the bulb on or off, report its status, check whether Smart Watt is online, open settings, and answer questions about NoskyTech.",
-            "Answered",
-            "Help provided",
+        case "REFRESH_DEVICE": {
+          setStatusMessage("Refreshing system metrics…");
+          await sessionCtx.refreshDevice();
+          await handleResponseOutput(
+            "System telemetry successfully refreshed.",
+            "Manual Sync completed. Device telemetry verified.",
+            "Completed",
+            "Metrics Synchronized"
           );
           break;
         }
 
+        case "GO_DASHBOARD":
+        case "OPEN_SETTINGS":
+        case "OPEN_PRIVACY":
+        case "OPEN_TERMS":
         case "SAFETY_INFO": {
-          await respond(
-            "For safety, mains electrical wiring should be installed and maintained by a qualified person.",
-            "Answered",
-            "Safety info provided",
+          const res = navigationEngine.resolveNavigation(intent, router);
+          await handleResponseOutput(
+            res.speechMessage,
+            res.speechMessage,
+            res.success ? "Completed" : "Failed",
+            intent
           );
           break;
         }
 
         case "UNKNOWN_HARDWARE": {
           const msg = cypherKnowledgeService.getUnsupportedDeviceMessage();
-          await respond(msg, "Failed", "Unsupported Device Request");
-          break;
-        }
-
-        case "EXPLAIN_NOSKYTECH": {
-          const ans = cypherKnowledgeService.getAnswer("What is NoskyTech?") || "";
-          await respond(ans, "Answered", "Explained NoskyTech");
-          break;
-        }
-
-        case "EXPLAIN_SMARTWATT": {
-          const ans = cypherKnowledgeService.getAnswer("What is SMART WATT?") || "";
-          await respond(ans, "Answered", "Explained Smart Watt");
-          break;
-        }
-
-        case "EXPLAIN_CYPHER": {
-          const ans = cypherKnowledgeService.getAnswer("What is Cypher?") || "";
-          await respond(ans, "Answered", "Explained Cypher");
-          break;
-        }
-
-        case "GUIDE_SIGNIN": {
-          await respond(
-            "To sign in, locate the email and password fields on the main page, input your credentials, and click Sign In. Hardware control requires authentication.",
-            "Answered",
-            "Guided Sign-In",
+          const outputs = responseEngine.generateResponse(intent, "failure", {
+            errorMsg: msg,
+          });
+          await handleResponseOutput(
+            outputs.spokenText,
+            outputs.uiText,
+            "Failed",
+            "Unsupported Hardware Request"
           );
           break;
         }
 
-        case "OPEN_PRIVACY": {
-          // Find existing Legal modal triggers or link
-          const trigger = document.querySelector(
-            '[data-legal-trigger="privacy"]',
-          ) as HTMLButtonElement | null;
-          if (trigger) trigger.click();
-          await respond("Displaying the privacy policy.", "Completed", "Privacy Policy Opened");
-          break;
-        }
+        case "EXPLAIN_NOSKYTECH":
+        case "EXPLAIN_SMARTWATT":
+        case "EXPLAIN_CYPHER":
+        case "GUIDE_SIGNIN":
+        case "GUIDE_INSTALLATION":
+        case "GUIDE_PWA":
+        case "OPEN_CONTACT":
+        case "HELP": {
+          // Resolve query using structured Knowledge Engine
+          const queryText = rawText || intent;
+          const { item, error } = cypherKnowledgeService.queryKnowledge(queryText, sessionCtx.isAuthenticated);
 
-        case "OPEN_TERMS": {
-          const trigger = document.querySelector(
-            '[data-legal-trigger="terms"]',
-          ) as HTMLButtonElement | null;
-          if (trigger) trigger.click();
-          await respond("Displaying the terms of use.", "Completed", "Terms of Use Opened");
-          break;
-        }
+          if (error === "AuthRequired") {
+            const msg = "Please sign in to access device configuration information.";
+            await handleResponseOutput(msg, msg, "Failed", "Auth Restricted Knowledge");
+            return;
+          }
 
-        case "OPEN_CONTACT": {
-          const trigger = document.querySelector(
-            '[data-legal-trigger="contact"]',
-          ) as HTMLButtonElement | null;
-          if (trigger) trigger.click();
-          await respond(
-            "You can contact NoskyTech at noskytech1@gmail.com or visit noskytech.vercel.app.",
-            "Answered",
-            "Contact Info Provided",
-          );
+          if (item) {
+            await handleResponseOutput(
+              item.spokenAnswer,
+              item.fullAnswer,
+              "Answered",
+              item.title
+            );
+          } else {
+            // Fallback templates from JSON rules
+            const fallText = cypherKnowledgeService.getFallbackMessage();
+            await handleResponseOutput(fallText, fallText, "Answered", "General Help Menu");
+          }
           break;
         }
 
         case "CONVERSATION": {
-          await respond(
-            "Hello, I am Cypher. How can I assist you with your Smart Watt automation today?",
+          const outputs = responseEngine.generateResponse(intent, "success");
+          await handleResponseOutput(
+            outputs.spokenText,
+            outputs.uiText,
             "Answered",
-            "Greeting response",
+            "Conversation Greeting"
           );
           break;
         }
 
         case "UNKNOWN":
         default: {
-          const answer = cypherKnowledgeService.getAnswer(rawText);
-          if (answer) {
-            await respond(answer, "Answered", "Knowledge Answered");
+          const { item, error } = cypherKnowledgeService.queryKnowledge(rawText, sessionCtx.isAuthenticated);
+
+          if (error === "AuthRequired") {
+            const msg = "Please sign in to view private system answers.";
+            await handleResponseOutput(msg, msg, "Failed", "Auth Restricted Query");
+            return;
+          }
+
+          if (item) {
+            await handleResponseOutput(
+              item.spokenAnswer,
+              item.fullAnswer,
+              "Answered",
+              item.title
+            );
           } else {
             const fb = cypherKnowledgeService.getFallbackMessage();
-            await respond(fb, "Failed", "Unknown command fallback");
+            await handleResponseOutput(fb, fb, "Failed", "Unknown command fallback");
           }
           break;
         }
       }
     },
-    [isAuthenticated, settings.alwaysOnListening],
+    [sessionCtx, settings, router],
   );
 
-  // Handle follow-up countdown
+  // Implement 10-seconds Follow-Up activation
   const startFollowUpWindow = useCallback(() => {
     if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
     if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
@@ -319,7 +335,6 @@ export function useCypher(isAuthenticated: boolean) {
     setStatusMessage("Listening (Follow-up)");
     setFollowUpCountdown(10);
 
-    // Re-init recognition for active listening
     initiateSpeechRecognition(true);
 
     let timeLeft = 10;
@@ -335,12 +350,10 @@ export function useCypher(isAuthenticated: boolean) {
     followUpTimerRef.current = setTimeout(() => {
       setFollowUpCountdown(null);
       if (settings.alwaysOnListening) {
-        // Return back to continuous wake phrase mode
         setState("sleeping");
         setStatusMessage("Sleeping (Always-On active)");
         initiateSpeechRecognition(false);
       } else {
-        // PTT stops
         setState("sleeping");
         setStatusMessage("Sleeping");
         terminateVoiceEngines();
@@ -348,43 +361,31 @@ export function useCypher(isAuthenticated: boolean) {
     }, 10000);
   }, [settings.alwaysOnListening, terminateVoiceEngines]);
 
-  // Initiate speech recognition service
+  // Initiate Audio Engine recognition loop
   const initiateSpeechRecognition = useCallback(
     (isFollowUp = false) => {
-      // If voice control disabled in preferences, block
-      if (
-        settings.listeningMode === "push_to_talk" &&
-        !isFollowUp &&
-        stateRef.current === "sleeping"
-      ) {
-        // Don't listen automatically in PTT sleep mode
-        return;
+      if (settings.listeningMode === "push_to_talk" && !isFollowUp && stateRef.current === "sleeping") {
+        return; // Push to talk mode stays sleeping
       }
 
-      if (recognitionRef.current) {
-        recognitionRef.current.destroy();
-      }
-
-      // Always-on is continuous unless it's a dedicated follow-up window (which allows wake-phrase bypass)
       const alwaysOnActive = settings.alwaysOnListening && !isFollowUp;
 
-      recognitionRef.current = new SpeechRecognitionService(
+      sessionCtx.setSpeechRecognitionActive(true);
+
+      audioEngine.startSpeechRecognition(
         {
           onResult: (text, isFinal) => {
             const lower = text.toLowerCase();
 
             if (alwaysOnActive && stateRef.current === "sleeping") {
-              // Check for wake word
               const hasWake = lower.includes("hey cypher") || lower.includes("cypher");
               if (hasWake) {
-                // Play premium chime
-                void chimeService.playActivationChime();
+                void audioEngine.playActivationChime();
                 setState("listening");
                 setStatusMessage("Listening…");
                 setTranscript("");
                 setInterimTranscript("");
 
-                // Strip wake phrase from command if present in exact stream
                 const cleanText = text
                   .replace(/hey cypher/gi, "")
                   .replace(/cypher/gi, "")
@@ -400,14 +401,12 @@ export function useCypher(isAuthenticated: boolean) {
               setTranscript(text);
               setInterimTranscript("");
 
-              // Clear any active follow-up timers once a command is received
               if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
               if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
               setFollowUpCountdown(null);
 
-              // Execute the matched command
-              const intent = parseCypherIntent(text);
-              void executeIntent(intent, text);
+              const parsed = parseCypherIntent(text);
+              void executeIntent(parsed.intent, text);
             } else {
               setInterimTranscript(text);
             }
@@ -446,17 +445,14 @@ export function useCypher(isAuthenticated: boolean) {
         },
         {
           isAlwaysOn: alwaysOnActive,
-          wakePhrases: [settings.wakePhrase],
-          lang: "en-NG",
-        },
+          wakePhrase: settings.wakePhrase,
+        }
       );
-
-      recognitionRef.current.start();
     },
-    [settings, executeIntent],
+    [settings, executeIntent, sessionCtx],
   );
 
-  // Activate microphone manually (Push-To-Talk trigger or manual wakeup)
+  // Manual Microphone Button Click trigger (PTT)
   const handleMicrophoneClick = useCallback(() => {
     const curState = stateRef.current;
     if (
@@ -467,22 +463,20 @@ export function useCypher(isAuthenticated: boolean) {
     ) {
       handleStop();
     } else {
-      // Clear followups
       if (followUpTimerRef.current) clearTimeout(followUpTimerRef.current);
       if (countdownIntervalRef.current) clearInterval(countdownIntervalRef.current);
       setFollowUpCountdown(null);
 
-      // Play chime
-      void chimeService.playActivationChime();
+      void audioEngine.playActivationChime();
       setTranscript("");
       setInterimTranscript("");
       setState("listening");
       setStatusMessage("Listening…");
-      initiateSpeechRecognition(true); // Initiate a single command-listening session
+      initiateSpeechRecognition(true);
     }
   }, [handleStop, initiateSpeechRecognition]);
 
-  // Sync Always-On preference with listener lifetime
+  // Sync Always-On listener preference
   useEffect(() => {
     if (settings.alwaysOnListening) {
       initiateSpeechRecognition(false);
@@ -492,23 +486,23 @@ export function useCypher(isAuthenticated: boolean) {
     return () => {
       terminateVoiceEngines();
     };
-  }, [settings.alwaysOnListening]);
+  }, [settings.alwaysOnListening, initiateSpeechRecognition, terminateVoiceEngines]);
 
-  // Re-sync listener when browser window gets refocused or restored
+  // Sync window focus listener to restore always-on
   useEffect(() => {
     if (typeof window === "undefined") return;
     const handleFocus = () => {
       if (
         settings.alwaysOnListening &&
         stateRef.current === "sleeping" &&
-        !recognitionRef.current
+        sessionCtx.speechRecognitionActive === false
       ) {
         initiateSpeechRecognition(false);
       }
     };
     window.addEventListener("focus", handleFocus);
     return () => window.removeEventListener("focus", handleFocus);
-  }, [settings.alwaysOnListening, initiateSpeechRecognition]);
+  }, [settings.alwaysOnListening, initiateSpeechRecognition, sessionCtx.speechRecognitionActive]);
 
   return {
     state,
