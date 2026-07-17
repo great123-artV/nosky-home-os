@@ -10,7 +10,7 @@ import {
 } from "@tanstack/react-router";
 import { useEffect, useState, useRef, type ReactNode } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { Zap, Settings as SettingsIcon, LogOut } from "lucide-react";
+import { Zap, Settings as SettingsIcon, LogOut, Radio, Cpu } from "lucide-react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -73,7 +73,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { title: "SMART WATT — Powered by NoskyTech" },
+      { title: "SMART WATT — Control Center" },
       {
         name: "description",
         content:
@@ -81,14 +81,14 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       },
       { name: "author", content: "NoskyTech" },
       { name: "theme-color", content: "#07101F" },
-      { property: "og:title", content: "SMART WATT — Powered by NoskyTech" },
+      { property: "og:title", content: "SMART WATT — Control Center" },
       {
         property: "og:description",
         content: "A premium connected device-control platform by NoskyTech.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "SMART WATT — Powered by NoskyTech" },
+      { name: "twitter:title", content: "SMART WATT — Control Center" },
       {
         name: "twitter:description",
         content: "A premium connected device-control platform by NoskyTech.",
@@ -242,7 +242,7 @@ function Splash({ onComplete }: SplashProps) {
 function TopBar({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-[#07101F]/80 backdrop-blur-xl">
-      <div className="mx-auto flex h-14 max-w-4xl items-center gap-3 px-4 sm:px-6">
+      <div className="mx-auto flex h-14 max-w-5xl items-center gap-3 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2.5">
           <span className="grid h-8 w-8 place-items-center rounded-lg border border-primary/40 bg-primary/10 text-primary">
             <Zap className="h-4 w-4" strokeWidth={2.4} />
@@ -257,9 +257,21 @@ function TopBar({ isAuthenticated }: { isAuthenticated: boolean }) {
           </span>
         </Link>
         {isAuthenticated && (
+          <div className="hidden sm:flex items-center gap-3 ml-6">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-cyan-500/25 bg-cyan-500/10 text-[10px] font-bold uppercase tracking-wider text-cyan-400">
+              <Radio className="h-3.5 w-3.5 animate-pulse" />
+              Cloud Connected
+            </span>
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-success/25 bg-success/10 text-[10px] font-bold uppercase tracking-wider text-success">
+              <Cpu className="h-3.5 w-3.5" />
+              Device Online
+            </span>
+          </div>
+        )}
+        {isAuthenticated && (
           <nav className="ml-auto hidden items-center gap-1 sm:flex">
             <NavLink to="/" icon={<Zap className="h-4 w-4" />}>
-              Control
+              Control Center
             </NavLink>
             <NavLink to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>
               Settings
@@ -288,7 +300,7 @@ function NavLink({ to, icon, children }: { to: string; icon: ReactNode; children
     <Link
       to={to}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+        "inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-semibold transition-colors",
         active ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
       )}
     >
@@ -370,12 +382,28 @@ function RootComponent() {
       <AnimatePresence>
         {!splashDone && <Splash key="splash" onComplete={() => setSplashDone(true)} />}
       </AnimatePresence>
-      <div className="flex min-h-screen flex-col">
-        <TopBar isAuthenticated={isAuthenticated} />
-        <main className="mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pb-10">
-          <Outlet />
-        </main>
-        <BottomNav isAuthenticated={isAuthenticated} />
+      <div className="flex min-h-screen flex-col bg-[#050B14]">
+
+        {/* Futuristic Background Layer Set with glows and grid patterns */}
+        <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 bg-[#050B14]">
+          {/* Subtle noise watermark */}
+          <div className="absolute inset-0 opacity-[0.015] bg-[radial-gradient(#fff_1px,transparent_1px)] [background-size:16px_16px]" />
+
+          {/* Dynamic blue neon gradient blobs */}
+          <div className="absolute top-[10%] left-[-20%] w-[80%] h-[60%] rounded-full bg-blue-600/10 blur-[130px] filter saturate-150 animate-pulse-glow" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-[10%] right-[-20%] w-[80%] h-[60%] rounded-full bg-cyan-600/5 blur-[150px] filter saturate-150 animate-pulse-glow" style={{ animationDuration: '12s' }} />
+
+          {/* Fine horizontal grid lines */}
+          <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.007)_1px,transparent_1px)] bg-[size:100%_40px] opacity-40" />
+        </div>
+
+        <div className="relative z-10 flex flex-col flex-1">
+          <TopBar isAuthenticated={isAuthenticated} />
+          <main className="mx-auto w-full max-w-5xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pb-10">
+            <Outlet />
+          </main>
+          <BottomNav isAuthenticated={isAuthenticated} />
+        </div>
       </div>
 
       {/* Global Cypher Assistant components */}

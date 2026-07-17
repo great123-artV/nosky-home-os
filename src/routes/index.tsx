@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { motion } from "motion/react";
+import { motion, AnimatePresence } from "motion/react";
 import type { RealtimeChannel, Session } from "@supabase/supabase-js";
 import {
   Loader2,
@@ -19,15 +19,24 @@ import {
 
 import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
-import { BulbVisual } from "@/components/bulb";
 import { LegalModal } from "@/components/legal-modal";
 import type { LegalDoc } from "@/lib/legal";
+
+// Import Redesigned Premium Cards
+import { HeroBulbCard } from "@/components/HeroBulbCard";
+import { DeviceHealthCard } from "@/components/DeviceHealthCard";
+import { CypherCard } from "@/components/CypherCard";
+import { ActivityTimelineCard } from "@/components/ActivityTimelineCard";
+import { QuickActionsCard } from "@/components/QuickActionsCard";
+
+// Import integrated global Cypher hook for the embedded card context
+import { useCypher } from "@/cypher/hooks/useCypher";
 
 export const Route = createFileRoute("/")({
   ssr: false,
   head: () => ({
     meta: [
-      { title: "SMART WATT — Control" },
+      { title: "SMART WATT — Premium Control Center" },
       {
         name: "description",
         content:
@@ -50,7 +59,7 @@ type DeviceStatus =
 function formatTime(iso: string | undefined | null) {
   if (!iso) return "—";
   try {
-    return new Date(iso).toLocaleString();
+    return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
     return iso;
   }
@@ -82,7 +91,7 @@ function SignIn({ onLegal }: { onLegal: (d: LegalDoc["id"]) => void }) {
   }
 
   return (
-    <div className="mx-auto flex min-h-[70vh] max-w-md flex-col justify-center">
+    <div className="mx-auto flex min-h-[75vh] max-w-md flex-col justify-center px-4">
       <div className="mb-8 text-center">
         <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-primary/40 bg-primary/10 text-primary shadow-glow">
           <Zap className="h-6 w-6" strokeWidth={2.2} />
@@ -95,7 +104,7 @@ function SignIn({ onLegal }: { onLegal: (d: LegalDoc["id"]) => void }) {
         </p>
       </div>
 
-      <form onSubmit={submit} className="glass rounded-2xl border border-white/10 p-6 sm:p-7">
+      <form onSubmit={submit} className="glass rounded-[24px] border border-white/10 p-6 sm:p-8">
         <h2 className="font-display text-lg font-semibold text-foreground">Sign in</h2>
         <p className="mt-1 text-xs text-muted-foreground">
           Authenticated access only. No anonymous relay control.
@@ -196,6 +205,9 @@ function SmartWattPage() {
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cmdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCmdRef = useRef<{ desired: boolean; at: number } | null>(null);
+
+  // Initialize embedded Cypher voice assistant context
+  const cypher = useCypher(!!session);
 
   // Session tracking
   useEffect(() => {
@@ -344,7 +356,7 @@ function SmartWattPage() {
 
   if (!supabaseConfigured) {
     return (
-      <div className="glass rounded-2xl border border-white/10 p-6">
+      <div className="glass rounded-[24px] border border-white/10 p-6">
         <div className="flex gap-3">
           <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
           <div>
@@ -383,16 +395,16 @@ function SmartWattPage() {
   const commandedOn = dev ? dev.desired_state : false;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {status.kind === "loading" && (
-        <div className="glass flex items-center gap-3 rounded-2xl border border-white/10 p-6">
+        <div className="glass flex items-center gap-3 rounded-[24px] border border-white/10 p-6">
           <Loader2 className="h-4 w-4 animate-spin text-primary" />
-          <span className="text-sm text-muted-foreground">Loading device…</span>
+          <span className="text-sm text-muted-foreground">Loading Smart Watt control surface…</span>
         </div>
       )}
 
       {status.kind === "error" && (
-        <div className="glass rounded-2xl border border-white/10 p-6">
+        <div className="glass rounded-[24px] border border-white/10 p-6">
           <div className="flex gap-3">
             <AlertTriangle className="h-5 w-5 shrink-0 text-destructive" />
             <div>
@@ -410,7 +422,7 @@ function SmartWattPage() {
       )}
 
       {status.kind === "missing" && (
-        <div className="glass rounded-2xl border border-white/10 p-6">
+        <div className="glass rounded-[24px] border border-white/10 p-6">
           <div className="flex gap-3">
             <AlertTriangle className="h-5 w-5 shrink-0 text-warning" />
             <div>
@@ -424,182 +436,111 @@ function SmartWattPage() {
       )}
 
       {dev && (
-        <>
-          <motion.section
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.45 }}
-            className="glass rounded-3xl border border-white/10 p-5 sm:p-8"
-          >
-            <div className="flex flex-wrap items-start justify-between gap-3">
-              <div>
-                <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
-                  Device
-                </p>
-                <h1 className="mt-1 font-display text-2xl font-bold text-foreground sm:text-3xl">
-                  BULB
-                </h1>
-                <p className="text-xs text-muted-foreground">Device code · {dev.device_code}</p>
-              </div>
-              <div className="flex flex-col items-end gap-1.5">
-                <StatusChip online={dev.online} />
-                <span
-                  className={cn(
-                    "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-medium",
-                    realtimeOk
-                      ? "border-primary/30 bg-primary/10 text-primary"
-                      : "border-warning/30 bg-warning/10 text-warning",
-                  )}
-                >
-                  {realtimeOk ? <Cloud className="h-3 w-3" /> : <CloudOff className="h-3 w-3" />}
-                  {realtimeOk ? "Cloud realtime" : "Cloud polling"}
-                </span>
-              </div>
-            </div>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
-            <div className="mt-6">
-              <BulbVisual on={confirmedOn} pending={pending} online={dev.online} />
-            </div>
+          {/* LEFT COLUMN: HERO BULB & QUICK ACTIONS (65-70%) */}
+          <div className="lg:col-span-8 space-y-6">
 
-            <div className="mt-6 grid place-items-center">
-              <button
-                onClick={togglePower}
-                disabled={sending || pending}
-                aria-label={commandedOn ? "Turn Bulb OFF" : "Turn Bulb ON"}
-                className={cn(
-                  "group relative inline-flex h-16 min-w-[220px] items-center justify-center gap-3 rounded-2xl px-8 text-sm font-semibold uppercase tracking-widest transition-all",
-                  "disabled:cursor-not-allowed disabled:opacity-70",
-                  confirmedOn
-                    ? "bg-white/90 text-[#07101F] shadow-glow hover:bg-white"
-                    : "bg-primary text-primary-foreground shadow-glow hover:brightness-110",
-                )}
-              >
-                {sending || pending ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                ) : (
-                  <Power className="h-5 w-5" strokeWidth={2.4} />
-                )}
-                {sending
-                  ? "Sending…"
-                  : pending
-                    ? "Waiting…"
-                    : commandedOn
-                      ? "Turn Bulb OFF"
-                      : "Turn Bulb ON"}
-              </button>
-            </div>
+            {/* Main Redesigned 3D Hero Bulb Control Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55 }}
+            >
+              <HeroBulbCard
+                on={confirmedOn}
+                desiredOn={commandedOn}
+                pending={pending}
+                online={dev.online}
+                sending={sending}
+                onToggle={togglePower}
+                lastUpdated={formatTime(dev.updated_at)}
+                deviceCode={dev.device_code}
+              />
+            </motion.div>
 
+            {/* Error notifications */}
             {cmdError && (
-              <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-center text-xs text-destructive">
+              <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-2.5 text-center text-xs text-destructive">
                 {cmdError}
               </p>
             )}
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
-              <StateTile
-                label="Commanded state"
-                value={commandedOn ? "ON" : "OFF"}
-                active={commandedOn}
-              />
-              <StateTile
-                label="Confirmed physical state"
-                value={confirmedOn ? "ON" : "OFF"}
-                active={confirmedOn}
-              />
-            </div>
-
-            <div
-              className={cn(
-                "mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-4 py-3 text-sm",
-                pending
-                  ? "border-warning/30 bg-warning/10 text-warning"
-                  : "border-success/30 bg-success/10 text-success",
-              )}
+            {/* Redesigned Floating Quick Actions Card */}
+            <motion.div
+              initial={{ opacity: 0, y: 15 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.55, delay: 0.1 }}
             >
-              <span className="inline-flex items-center gap-2 font-medium">
-                {pending ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Waiting for device confirmation…
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="h-4 w-4" />
-                    Command confirmed
-                  </>
-                )}
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
-                <Clock className="h-3.5 w-3.5" />
-                Last update {formatTime(dev.updated_at)}
-              </span>
-            </div>
+              <QuickActionsCard
+                on={confirmedOn}
+                online={dev.online}
+                onTurnOn={() => sendDesired(true)}
+                onTurnOff={() => sendDesired(false)}
+                onTriggerCypher={() => cypher.handleMicrophoneClick()}
+                onTriggerRefresh={fetchDevice}
+                onNavigateSettings={() => window.location.assign("/settings")}
+              />
+            </motion.div>
 
-            {!dev.online && (
-              <p className="mt-3 rounded-xl border border-warning/30 bg-warning/10 px-4 py-2.5 text-xs text-warning">
-                Device Offline. Remote commands may remain pending until the device reconnects.
-              </p>
-            )}
-          </motion.section>
+          </div>
 
-          <p className="text-center text-[11px] text-muted-foreground">
-            SMART WATT · Powered by NoskyTech ·{" "}
-            <Link to="/settings" className="text-primary hover:underline">
-              Settings
-            </Link>
-          </p>
-        </>
+          {/* RIGHT COLUMN: INTELLIGENCE - HEALTH, CYPHER, ACTIVITY TIMELINE (30-35%) */}
+          <div className="lg:col-span-4 space-y-6">
+
+            {/* Device Health Telemetry Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.55, delay: 0.15 }}
+            >
+              <DeviceHealthCard
+                deviceCode={dev.device_code}
+                online={dev.online}
+                desiredState={dev.desired_state}
+                actualState={dev.actual_state}
+                lastSeen={formatTime(dev.updated_at)}
+                realtimeOk={realtimeOk}
+              />
+            </motion.div>
+
+            {/* Integrated Embedded Cypher Card */}
+            <motion.div
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.55, delay: 0.2 }}
+            >
+              <CypherCard cypher={cypher} />
+            </motion.div>
+
+            {/* Recent Action Event Timeline */}
+            <motion.div
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.55, delay: 0.25 }}
+            >
+              <ActivityTimelineCard
+                deviceLastUpdated={dev.updated_at}
+                history={cypher.history}
+              />
+            </motion.div>
+
+          </div>
+
+        </div>
       )}
+
+      {/* Legal agreements trigger and footer markup */}
+      <footer className="pt-6 text-center text-[11px] text-muted-foreground">
+        <p>
+          SMART WATT SYSTEM V2.5 · Powered by NoskyTech ·{" "}
+          <Link to="/settings" className="text-primary hover:underline font-semibold">
+            Settings
+          </Link>
+        </p>
+      </footer>
 
       <LegalModal docId={legal} onClose={() => setLegal(null)} />
-    </div>
-  );
-}
-
-function StatusChip({ online }: { online: boolean }) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold",
-        online
-          ? "border-success/30 bg-success/10 text-success"
-          : "border-destructive/30 bg-destructive/10 text-destructive",
-      )}
-    >
-      {online ? (
-        <>
-          <Wifi className="h-3.5 w-3.5" />
-          <span className="h-1.5 w-1.5 animate-pulse-glow rounded-full bg-success" />
-          Online
-        </>
-      ) : (
-        <>
-          <WifiOff className="h-3.5 w-3.5" /> Offline
-        </>
-      )}
-    </span>
-  );
-}
-
-function StateTile({ label, value, active }: { label: string; value: string; active: boolean }) {
-  return (
-    <div
-      className={cn(
-        "rounded-xl border p-4 transition-colors",
-        active ? "border-primary/40 bg-primary/10" : "border-border bg-background/40",
-      )}
-    >
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">
-        {label}
-      </p>
-      <p
-        className={cn(
-          "mt-1 font-display text-2xl font-bold",
-          active ? "text-primary" : "text-foreground",
-        )}
-      >
-        {value}
-      </p>
     </div>
   );
 }
