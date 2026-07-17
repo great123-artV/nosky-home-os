@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
-import type { RealtimeChannel } from "@supabase/supabase-js";
+import type { Session, RealtimeChannel } from "@supabase/supabase-js";
 import {
   User as UserIcon,
   LogOut,
@@ -12,20 +11,30 @@ import {
   ChevronRight,
   Mic,
   Volume2,
+  VolumeX,
   Loader2,
   FileText,
   BookOpen,
   Info,
   Zap,
   MicOff,
+  History,
+  Trash2,
+  Sparkles,
 } from "lucide-react";
 
 import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supabase";
 import { Toggle } from "@/components/primitives";
 import { LegalModal } from "@/components/legal-modal";
-import { speak, getSpeechRecognitionCtor } from "@/lib/cypher";
 import { cn } from "@/lib/utils";
 import type { LegalDoc } from "@/lib/legal";
+
+// Cypher imports
+import { CypherSettings, ListeningMode } from "@/cypher/types";
+import { cypherSettingsService } from "@/cypher/settings/settingsService";
+import { cypherHistoryService } from "@/cypher/history/historyService";
+import { elevenLabsSpeechService } from "@/cypher/services/elevenLabsSpeechService";
+import { Slider } from "@/components/ui/slider";
 
 export const Route = createFileRoute("/settings")({
   ssr: false,
@@ -72,9 +81,11 @@ function SettingsPage() {
   const [legal, setLegal] = useState<LegalDoc["id"] | null>(null);
   const [micPerm, setMicPerm] = useState<string>("unknown");
 
-  const [voice, setVoice] = useLocalPref("sw.voice", "on");
-  const [speech, setSpeech] = useLocalPref("sw.speech", "on");
-  const [lang, setLang] = useLocalPref("sw.lang", "en-NG");
+  // Cypher integrated configuration state
+  const [cypherSettings, setCypherSettings] = useState<CypherSettings>(() =>
+    cypherSettingsService.getSettings()
+  );
+
   const [theme, setTheme] = useLocalPref("sw.theme", "dark");
 
   useEffect(() => {
@@ -90,6 +101,15 @@ function SettingsPage() {
       sub.subscription.unsubscribe();
     };
   }, []);
+
+  useEffect(() => {
+    const unsub = cypherSettingsService.subscribe(setCypherSettings);
+    return () => unsub();
+  }, []);
+
+  const updateCypher = (val: Partial<CypherSettings>) => {
+    cypherSettingsService.saveSettings(val);
+  };
 
   useEffect(() => {
     if (!session || !supabaseConfigured) return;
@@ -164,7 +184,6 @@ function SettingsPage() {
   }
 
   const email = session.user.email ?? "—";
-  const supportsVoice = !!getSpeechRecognitionCtor();
 
   return (
     <div className="space-y-5">
@@ -220,62 +239,163 @@ function SettingsPage() {
         />
       </Section>
 
-      {/* CYPHER */}
+      {/* CYPHER VOICE ASSISTANT */}
       <Section title="Cypher voice assistant">
-        <Row
-          icon={<Mic className="h-5 w-5" />}
-          label="Voice control"
-          desc={
-            supportsVoice ? "Enable Cypher microphone commands" : "Not supported in this browser"
-          }
-          control={
-            <Toggle
-              on={voice === "on" && supportsVoice}
-              onChange={() => setVoice(voice === "on" ? "off" : "on")}
-              label="Voice control"
-            />
-          }
-        />
+        {/* Listening Mode Option */}
+        <div className="flex flex-col gap-3 px-5 py-4">
+          <div className="flex items-center gap-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+              <Mic className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Listening Mode</p>
+              <p className="truncate text-xs text-muted-foreground">
+                Choose how Cypher interacts with your voice
+              </p>
+            </div>
+            <select
+              value={cypherSettings.listeningMode}
+              onChange={(e) => {
+                const mode = e.target.value as ListeningMode;
+                updateCypher({
+                  listeningMode: mode,
+                  alwaysOnListening: mode === "always_on",
+                });
+              }}
+              className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none"
+            >
+              <option value="push_to_talk">Push-to-Talk</option>
+              <option value="always_on">Always-On Listening</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Wake Phrase Option */}
+        {cypherSettings.listeningMode === "always_on" && (
+          <div className="flex items-center gap-4 px-5 py-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Wake Phrase</p>
+              <p className="truncate text-xs text-muted-foreground">Words that activate Always-On Cypher</p>
+            </div>
+            <select
+              value={cypherSettings.wakePhrase}
+              onChange={(e) => updateCypher({ wakePhrase: e.target.value as any })}
+              className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none"
+            >
+              <option value="Hey Cypher">Hey Cypher</option>
+              <option value="Cypher">Cypher</option>
+            </select>
+          </div>
+        )}
+
+        {/* Spoken feedback */}
         <Row
           icon={<Volume2 className="h-5 w-5" />}
-          label="Spoken feedback"
-          desc="Cypher speaks confirmation and status"
+          label="Voice responses"
+          desc="Cypher speaks confirmation and status aloud"
           control={
             <Toggle
-              on={speech === "on"}
-              onChange={() => setSpeech(speech === "on" ? "off" : "on")}
-              label="Spoken feedback"
+              on={cypherSettings.voiceResponses}
+              onChange={() => updateCypher({ voiceResponses: !cypherSettings.voiceResponses })}
+              label="Voice responses"
             />
           }
         />
-        <div className="flex items-center gap-4 px-5 py-4">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-            <Globe className="h-5 w-5" />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="text-sm font-semibold text-foreground">Recognition language</p>
-            <p className="truncate text-xs text-muted-foreground">Preferred Cypher speech locale</p>
+
+        {/* Play Startup Sound */}
+        <Row
+          icon={<Volume2 className="h-5 w-5" />}
+          label="Play startup sound"
+          desc="Play a premium chime sound upon activation"
+          control={
+            <Toggle
+              on={cypherSettings.startupSound}
+              onChange={() => updateCypher({ startupSound: !cypherSettings.startupSound })}
+              label="Play startup sound"
+            />
+          }
+        />
+
+        {/* Browser Voice Fallback (ElevenLabs proxy vs Web Speech API) */}
+        <Row
+          icon={<Globe className="h-5 w-5" />}
+          label="Browser voice fallback"
+          desc="Force local SpeechSynthesis voice instead of ElevenLabs proxy"
+          control={
+            <Toggle
+              on={cypherSettings.browserVoiceFallback}
+              onChange={() => updateCypher({ browserVoiceFallback: !cypherSettings.browserVoiceFallback })}
+              label="Browser voice fallback"
+            />
+          }
+        />
+
+        {/* Volume controls */}
+        <div className="flex flex-col gap-2.5 px-5 py-4">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Voice Volume</span>
+            <span>{Math.round(cypherSettings.voiceVolume * 100)}%</span>
           </div>
-          <select
-            value={lang}
-            onChange={(e) => setLang(e.target.value)}
-            className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none"
-          >
-            <option value="en-NG">English (Nigeria)</option>
-            <option value="en-US">English (US)</option>
-            <option value="en-GB">English (UK)</option>
-          </select>
+          <div className="flex items-center gap-3">
+            <VolumeX className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <Slider
+              value={[cypherSettings.voiceVolume * 100]}
+              min={0}
+              max={100}
+              step={5}
+              onValueChange={(val) => updateCypher({ voiceVolume: val[0] / 100 })}
+              className="flex-1 py-1"
+            />
+            <Volume2 className="h-4 w-4 shrink-0 text-primary" />
+          </div>
         </div>
+
+        {/* Speech Rate controls */}
+        <div className="flex flex-col gap-2.5 px-5 py-4">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span className="font-semibold text-foreground">Speech Speed</span>
+            <span>{cypherSettings.speechRate.toFixed(1)}x</span>
+          </div>
+          <div className="flex items-center gap-3">
+            <span className="text-[10px] text-muted-foreground">Slow</span>
+            <Slider
+              value={[cypherSettings.speechRate * 100]}
+              min={50}
+              max={200}
+              step={10}
+              onValueChange={(val) => updateCypher({ speechRate: val[0] / 100 })}
+              className="flex-1 py-1"
+            />
+            <span className="text-[10px] text-primary">Fast</span>
+          </div>
+        </div>
+
+        {/* Clear History */}
+        <Row
+          icon={<History className="h-5 w-5" />}
+          label="Clear conversation history"
+          desc="Delete all cached transcripts and voice actions"
+          onClick={() => {
+            cypherHistoryService.clearHistory();
+          }}
+        />
+
         <Row
           icon={micPerm === "denied" ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
           label={`Microphone permission · ${micPerm}`}
-          desc="Managed by your browser"
+          desc="Managed securely by your browser settings"
         />
+
         <Row
           icon={<Volume2 className="h-5 w-5" />}
           label="Test Cypher voice"
-          desc="Play a short spoken sample"
-          onClick={() => speak("This is Cypher, your Smart Watt voice assistant.", true)}
+          desc="Play a quick audio test using chosen path"
+          onClick={() => {
+            void elevenLabsSpeechService.speak("This is Cypher, your premium NoskyTech voice assistant.", () => {});
+          }}
         />
       </Section>
 

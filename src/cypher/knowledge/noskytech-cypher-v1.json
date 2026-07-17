@@ -1,0 +1,147 @@
+{
+  "metadata": {
+    "title": "NoskyTech Cypher V1 Knowledge Base",
+    "version": "1.0.0",
+    "language": "en",
+    "last_updated": "2026-07-17",
+    "purpose": "Approved company and product knowledge for Cypher V1",
+    "response_style": {
+      "tone": "calm, confident, concise, professional",
+      "maximum_spoken_sentences": 3,
+      "avoid_unverified_claims": true
+    }
+  },
+  "company": {
+    "name": "NoskyTech",
+    "description": "NoskyTech is a technology company focused on smart automation, embedded systems, the Internet of Things, artificial intelligence integrations, and intelligent connected products.",
+    "mission": "To build practical intelligent technologies while demonstrating the strength of African innovation.",
+    "vision": "To create a connected ecosystem where people can interact naturally and securely with intelligent devices.",
+    "website": "https://noskytech.vercel.app",
+    "support_email": "noskytech1@gmail.com",
+    "brand_positioning": "Premium, practical, intelligent, and African-focused technology."
+  },
+  "products": {
+    "smart_watt": {
+      "name": "SMART WATT",
+      "description": "SMART WATT is a NoskyTech connected-device platform that allows authorized users to remotely control supported electrical loads through a secure web interface.",
+      "current_capability": "The current version controls one bulb through an ESP32-connected relay.",
+      "device_code": "SW-0001",
+      "platform_components": [
+        "ESP32 controller",
+        "relay output",
+        "Supabase cloud backend",
+        "web dashboard",
+        "realtime device-state confirmation",
+        "Cypher voice control"
+      ],
+      "state_model": {
+        "desired_state": "The state requested by the user.",
+        "actual_state": "The state confirmed by the physical device.",
+        "online": "Whether the device is currently communicating with the cloud."
+      },
+      "limitations": [
+        "The current version supports one bulb.",
+        "Physical device control requires authentication.",
+        "Cypher must not claim unsupported appliances are available.",
+        "An offline device may not execute a command immediately."
+      ]
+    },
+    "cypher": {
+      "name": "Cypher",
+      "description": "Cypher is the NoskyTech voice assistant for controlling supported devices, reporting device status, guiding users, and answering approved questions about NoskyTech.",
+      "voice_provider": "ElevenLabs",
+      "interaction_mode": "voice-first",
+      "wake_phrases": ["Hey Cypher", "Cypher"],
+      "listening_modes": {
+        "push_to_talk": "Default mode. Cypher listens only after the user activates the microphone.",
+        "always_on": "Optional mode. Once enabled, Cypher keeps listening for the wake phrase until the user disables it, permission is revoked, the browser ends the session, or a critical error occurs."
+      },
+      "allowed_device_intents": [
+        "TURN_ON",
+        "TURN_OFF",
+        "GET_BULB_STATUS",
+        "GET_DEVICE_STATUS",
+        "OPEN_SETTINGS",
+        "HELP",
+        "SAFETY_INFO"
+      ],
+      "security_rules": [
+        "Company questions must never trigger a hardware action.",
+        "Hardware commands must use deterministic intent matching.",
+        "Cypher must wait for actual device confirmation before announcing success.",
+        "Cypher must not control hardware before authentication.",
+        "Cypher must not expose API keys, passwords, tokens, or private configuration."
+      ]
+    }
+  },
+  "services": [
+    "Smart home automation",
+    "Embedded systems",
+    "Internet of Things solutions",
+    "AI integrations",
+    "Industrial automation",
+    "Web application development"
+  ],
+  "safety": {
+    "general_notice": "SMART WATT may interact with mains electricity. Installation, inspection, and repair should be handled by a qualified person.",
+    "voice_response": "For safety, mains electrical wiring should be installed and maintained by a qualified person.",
+    "prohibited_guidance": [
+      "Do not claim that the system guarantees complete electrical safety.",
+      "Do not tell users to touch exposed wiring.",
+      "Do not provide unsafe live-wiring instructions."
+    ]
+  },
+  "support": {
+    "email": "noskytech1@gmail.com",
+    "website": "https://noskytech.vercel.app",
+    "password_recovery_message": "Password recovery is being prepared. Please contact NoskyTech support for assistance.",
+    "unknown_answer_message": "I do not have verified information about that yet. Please contact NoskyTech support."
+  },
+  "approved_answers": [
+    {
+      "questions": ["What is NoskyTech?", "Tell me about NoskyTech", "Who is NoskyTech?"],
+      "answer": "NoskyTech is a technology company focused on smart automation, embedded systems, the Internet of Things, AI integrations, and intelligent connected products."
+    },
+    {
+      "questions": ["What does NoskyTech do?", "What services does NoskyTech offer?"],
+      "answer": "NoskyTech develops smart automation, embedded systems, IoT solutions, AI integrations, connected-device platforms, and web applications."
+    },
+    {
+      "questions": ["What is SMART WATT?", "Tell me about Smart Watt"],
+      "answer": "SMART WATT is a NoskyTech connected-device platform for securely controlling supported electrical loads. The current version controls one bulb through an ESP32-connected relay."
+    },
+    {
+      "questions": ["What is Cypher?", "Who are you?"],
+      "answer": "I am Cypher, the NoskyTech voice assistant. I can control supported devices, report their status, guide users, and answer approved questions about NoskyTech."
+    },
+    {
+      "questions": ["How do I contact NoskyTech?", "What is the support email?"],
+      "answer": "You can contact NoskyTech at noskytech1@gmail.com or visit noskytech.vercel.app."
+    },
+    {
+      "questions": ["What can you control?", "Which device can you control?"],
+      "answer": "In the current version, I can control one supported bulb connected to SMART WATT."
+    },
+    {
+      "questions": ["Are you always listening?", "Do you keep listening?"],
+      "answer": "I can remain in always-on listening mode after you enable it. I listen for the wake phrase until you disable the feature or microphone access ends."
+    }
+  ],
+  "fallback_rules": {
+    "unknown_company_question": "I do not have verified information about that yet. Please contact NoskyTech support.",
+    "unsupported_device": "That device is not available in this version of SMART WATT.",
+    "offline_device": "The SMART WATT device is currently offline. Please check its power and internet connection.",
+    "unclear_voice_command": "I did not understand that command. Please try again.",
+    "pre_login_control_attempt": "Please sign in before controlling the bulb.",
+    "no_confirmation": "The device did not confirm the operation."
+  },
+  "prohibited_claims": [
+    "Unverified prices",
+    "Unverified certifications",
+    "Unverified partnerships",
+    "Unconfirmed launch dates",
+    "Unsupported product capabilities",
+    "Private credentials",
+    "Secret API keys"
+  ]
+}

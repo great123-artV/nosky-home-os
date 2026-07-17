@@ -20,9 +20,7 @@ import {
 import { supabase, supabaseConfigured, type SmartWattDevice } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 import { BulbVisual } from "@/components/bulb";
-import { CypherPanel, type CypherState, type CypherAction } from "@/components/cypher";
 import { LegalModal } from "@/components/legal-modal";
-import { speak, type CypherIntent } from "@/lib/cypher";
 import type { LegalDoc } from "@/lib/legal";
 
 export const Route = createFileRoute("/")({
@@ -194,26 +192,10 @@ function SmartWattPage() {
   const [cmdError, setCmdError] = useState<string | null>(null);
   const [realtimeOk, setRealtimeOk] = useState(false);
   const [legal, setLegal] = useState<LegalDoc["id"] | null>(null);
-  const [cypherState, setCypherState] = useState<CypherState>("idle");
-  const [cypherMsg, setCypherMsg] = useState<string | undefined>();
   const channelRef = useRef<RealtimeChannel | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const cmdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const pendingCmdRef = useRef<{ desired: boolean; at: number } | null>(null);
-
-  // Load user prefs
-  const [voiceEnabled, setVoiceEnabled] = useState(true);
-  const [speechEnabled, setSpeechEnabled] = useState(true);
-  const [language, setLanguage] = useState("en-NG");
-  useEffect(() => {
-    try {
-      setVoiceEnabled(localStorage.getItem("sw.voice") !== "off");
-      setSpeechEnabled(localStorage.getItem("sw.speech") !== "off");
-      setLanguage(localStorage.getItem("sw.lang") || "en-NG");
-    } catch {
-      /* noop */
-    }
-  }, []);
 
   // Session tracking
   useEffect(() => {
@@ -315,36 +297,18 @@ function SmartWattPage() {
         clearTimeout(cmdTimerRef.current);
         cmdTimerRef.current = null;
       }
-      setCypherState("success");
-      const msg = pending.desired ? "The bulb is now on." : "The bulb is now off.";
-      setCypherMsg(msg);
-      speak(msg, speechEnabled);
-      setTimeout(() => setCypherState("idle"), 3000);
     }
-  }, [status, speechEnabled]);
+  }, [status]);
 
-  async function sendDesired(next: boolean, source: "manual" | "voice") {
+  async function sendDesired(next: boolean) {
     if (status.kind !== "ready") return;
-    // Safety: prevent duplicate rapid commands
     if (sending) return;
     if (status.device.desired_state === next && status.device.actual_state === next) {
-      const already = next ? "The bulb is already on." : "The bulb is already off.";
-      if (source === "voice") {
-        setCypherState("success");
-        setCypherMsg(already);
-        speak(already, speechEnabled);
-        setTimeout(() => setCypherState("idle"), 2500);
-      }
       return;
     }
 
     setSending(true);
     setCmdError(null);
-    if (source === "voice") {
-      setCypherState("sending");
-      setCypherMsg("Sending command…");
-      speak(next ? "Turning on the bulb." : "Turning off the bulb.", speechEnabled);
-    }
 
     const { error } = await supabase
       .from("smart_watt_devices")
@@ -359,106 +323,21 @@ function SmartWattPage() {
         ? "Permission denied. Your account is not allowed to control this device."
         : `Could not send the command: ${error.message}`;
       setCmdError(msg);
-      if (source === "voice") {
-        setCypherState("error");
-        setCypherMsg("I could not send the command. Please check your connection and try again.");
-        speak(
-          "I could not send the command. Please check your connection and try again.",
-          speechEnabled,
-        );
-      }
       return;
     }
 
     pendingCmdRef.current = { desired: next, at: Date.now() };
-    if (source === "voice") {
-      setCypherState("waiting");
-      setCypherMsg("Command sent. Waiting for BULB confirmation…");
-      speak("Command sent. Waiting for the device.", speechEnabled);
-    }
     if (cmdTimerRef.current) clearTimeout(cmdTimerRef.current);
     cmdTimerRef.current = setTimeout(() => {
       if (pendingCmdRef.current) {
         pendingCmdRef.current = null;
-        if (source === "voice") {
-          setCypherState("error");
-          setCypherMsg("The command was sent, but the device did not confirm the change.");
-          speak("The command was sent, but the device did not confirm the change.", speechEnabled);
-        }
       }
     }, CMD_TIMEOUT_MS);
   }
 
   function togglePower() {
     if (status.kind !== "ready") return;
-    void sendDesired(!status.device.desired_state, "manual");
-  }
-
-  function handleCypher(action: CypherAction) {
-    const intent: CypherIntent = action.intent;
-    if (status.kind !== "ready") {
-      setCypherState("error");
-      setCypherMsg("Device is not ready yet. Please try again in a moment.");
-      speak("Device is not ready yet.", speechEnabled);
-      return;
-    }
-    const dev = status.device;
-
-    switch (intent) {
-      case "TURN_ON":
-      case "TURN_OFF": {
-        const next = intent === "TURN_ON";
-        if (!dev.online) {
-          const msg =
-            "The Smart Watt device is offline. Your command may remain pending until it reconnects.";
-          setCypherState("error");
-          setCypherMsg(msg);
-          speak(msg, speechEnabled);
-          return;
-        }
-        void sendDesired(next, "voice");
-        return;
-      }
-      case "GET_BULB_STATUS": {
-        const msg = dev.actual_state ? "The bulb is currently on." : "The bulb is currently off.";
-        setCypherState("success");
-        setCypherMsg(msg);
-        speak(msg, speechEnabled);
-        setTimeout(() => setCypherState("idle"), 2500);
-        return;
-      }
-      case "GET_DEVICE_STATUS": {
-        const msg = dev.online ? "The device is online." : "The device is offline.";
-        setCypherState("success");
-        setCypherMsg(msg);
-        speak(msg, speechEnabled);
-        setTimeout(() => setCypherState("idle"), 2500);
-        return;
-      }
-      case "OPEN_SETTINGS": {
-        speak("Opening settings.", speechEnabled);
-        window.location.assign("/settings");
-        return;
-      }
-      case "HELP": {
-        const msg =
-          "I can turn the bulb on or off, report its status, check whether Smart Watt is online, open Settings and provide basic safety guidance.";
-        setCypherState("success");
-        setCypherMsg(msg);
-        speak(msg, speechEnabled);
-        setTimeout(() => setCypherState("idle"), 4000);
-        return;
-      }
-      case "SAFETY_INFORMATION": {
-        const msg =
-          "Always disconnect mains power before servicing your Smart Watt device. Only a qualified electrician should perform installation and wiring.";
-        setCypherState("success");
-        setCypherMsg(msg);
-        speak(msg, speechEnabled);
-        setTimeout(() => setCypherState("idle"), 5000);
-        return;
-      }
-    }
+    void sendDesired(!status.device.desired_state);
   }
 
   /* -------- Gates -------- */
@@ -662,15 +541,6 @@ function SmartWattPage() {
               </p>
             )}
           </motion.section>
-
-          <CypherPanel
-            voiceEnabled={voiceEnabled}
-            speechEnabled={speechEnabled}
-            language={language}
-            externalState={cypherState}
-            externalMessage={cypherMsg}
-            onIntent={handleCypher}
-          />
 
           <p className="text-center text-[11px] text-muted-foreground">
             SMART WATT · Powered by NoskyTech ·{" "}

@@ -17,6 +17,11 @@ import { reportLovableError } from "../lib/lovable-error-reporting";
 import { supabase, supabaseConfigured } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
 
+// Cypher Global Integration imports
+import { useCypher } from "@/cypher/hooks/useCypher";
+import { CypherFloatingButton } from "@/cypher/components/CypherFloatingButton";
+import { CypherDrawer } from "@/cypher/components/CypherDrawer";
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -234,7 +239,7 @@ function Splash({ onComplete }: SplashProps) {
   );
 }
 
-function TopBar() {
+function TopBar({ isAuthenticated }: { isAuthenticated: boolean }) {
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-[#07101F]/80 backdrop-blur-xl">
       <div className="mx-auto flex h-14 max-w-4xl items-center gap-3 px-4 sm:px-6">
@@ -251,22 +256,26 @@ function TopBar() {
             </span>
           </span>
         </Link>
-        <nav className="ml-auto hidden items-center gap-1 sm:flex">
-          <NavLink to="/" icon={<Zap className="h-4 w-4" />}>
-            Control
-          </NavLink>
-          <NavLink to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>
-            Settings
-          </NavLink>
-        </nav>
-        <button
-          onClick={() => supabase.auth.signOut()}
-          className="ml-auto grid h-9 w-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground sm:ml-0"
-          aria-label="Sign out"
-          title="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        {isAuthenticated && (
+          <nav className="ml-auto hidden items-center gap-1 sm:flex">
+            <NavLink to="/" icon={<Zap className="h-4 w-4" />}>
+              Control
+            </NavLink>
+            <NavLink to="/settings" icon={<SettingsIcon className="h-4 w-4" />}>
+              Settings
+            </NavLink>
+          </nav>
+        )}
+        {isAuthenticated && (
+          <button
+            onClick={() => supabase.auth.signOut()}
+            className="ml-auto grid h-9 w-9 place-items-center rounded-lg border border-border text-muted-foreground transition hover:bg-accent hover:text-foreground sm:ml-0"
+            aria-label="Sign out"
+            title="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        )}
       </div>
     </header>
   );
@@ -290,8 +299,10 @@ function NavLink({ to, icon, children }: { to: string; icon: ReactNode; children
 }
 
 // Bottom navigation on mobile devices
-function BottomNav() {
+function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  if (!isAuthenticated) return null;
+
   const items = [
     { to: "/", label: "Control", icon: Zap },
     { to: "/settings", label: "Settings", icon: SettingsIcon },
@@ -333,6 +344,26 @@ function BottomNav() {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const [splashDone, setSplashDone] = useState(false);
+  const [session, setSession] = useState<any>(null);
+  const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+
+  // Auth State listener
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => {
+      setSession(data.session);
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+      setSession(s);
+    });
+    return () => {
+      sub.subscription.unsubscribe();
+    };
+  }, []);
+
+  const isAuthenticated = !!session;
+
+  // Initialize unified global Cypher brain hook
+  const cypher = useCypher(isAuthenticated);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -340,12 +371,23 @@ function RootComponent() {
         {!splashDone && <Splash key="splash" onComplete={() => setSplashDone(true)} />}
       </AnimatePresence>
       <div className="flex min-h-screen flex-col">
-        <TopBar />
+        <TopBar isAuthenticated={isAuthenticated} />
         <main className="mx-auto w-full max-w-4xl flex-1 px-4 pb-24 pt-6 sm:px-6 sm:pb-10">
           <Outlet />
         </main>
-        <BottomNav />
+        <BottomNav isAuthenticated={isAuthenticated} />
       </div>
+
+      {/* Global Cypher Assistant components */}
+      <CypherFloatingButton
+        cypher={cypher}
+        onClick={() => setIsDrawerOpen(true)}
+      />
+      <CypherDrawer
+        isOpen={isDrawerOpen}
+        onClose={() => setIsDrawerOpen(false)}
+        cypher={cypher}
+      />
     </QueryClientProvider>
   );
 }
