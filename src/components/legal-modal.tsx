@@ -35,9 +35,7 @@ export function LegalModal({
                   {doc.title}
                 </h2>
                 {doc.effective && (
-                  <p className="text-[11px] text-muted-foreground">
-                    Effective {doc.effective}
-                  </p>
+                  <p className="text-[11px] text-muted-foreground">Effective {doc.effective}</p>
                 )}
               </div>
               <button

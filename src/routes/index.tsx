@@ -30,7 +30,11 @@ export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
       { title: "SMART WATT — Control" },
-      { name: "description", content: "Control your BULB with SMART WATT — a premium connected device-control platform by NoskyTech." },
+      {
+        name: "description",
+        content:
+          "Control your BULB with SMART WATT — a premium connected device-control platform by NoskyTech.",
+      },
     ],
   }),
   component: SmartWattPage,
@@ -154,11 +158,19 @@ function SignIn({ onLegal }: { onLegal: (d: LegalDoc["id"]) => void }) {
 
         <p className="mt-5 text-center text-[11px] leading-relaxed text-muted-foreground">
           By signing in, you agree to the SMART WATT{" "}
-          <button type="button" onClick={() => onLegal("terms")} className="text-primary hover:underline">
+          <button
+            type="button"
+            onClick={() => onLegal("terms")}
+            className="text-primary hover:underline"
+          >
             Terms of Use
           </button>{" "}
           and acknowledge the{" "}
-          <button type="button" onClick={() => onLegal("privacy")} className="text-primary hover:underline">
+          <button
+            type="button"
+            onClick={() => onLegal("privacy")}
+            className="text-primary hover:underline"
+          >
             Privacy Policy
           </button>
           .
@@ -198,7 +210,9 @@ function SmartWattPage() {
       setVoiceEnabled(localStorage.getItem("sw.voice") !== "off");
       setSpeechEnabled(localStorage.getItem("sw.speech") !== "off");
       setLanguage(localStorage.getItem("sw.lang") || "en-NG");
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }, []);
 
   // Session tracking
@@ -263,7 +277,10 @@ function SmartWattPage() {
       .subscribe((state) => {
         if (state === "SUBSCRIBED") {
           setRealtimeOk(true);
-          if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+          if (pollRef.current) {
+            clearInterval(pollRef.current);
+            pollRef.current = null;
+          }
         } else if (state === "CHANNEL_ERROR" || state === "TIMED_OUT" || state === "CLOSED") {
           setRealtimeOk(false);
           if (!pollRef.current) pollRef.current = setInterval(fetchDevice, 5000);
@@ -275,8 +292,14 @@ function SmartWattPage() {
       cancelled = true;
       supabase.removeChannel(channel);
       channelRef.current = null;
-      if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
-      if (cmdTimerRef.current) { clearTimeout(cmdTimerRef.current); cmdTimerRef.current = null; }
+      if (pollRef.current) {
+        clearInterval(pollRef.current);
+        pollRef.current = null;
+      }
+      if (cmdTimerRef.current) {
+        clearTimeout(cmdTimerRef.current);
+        cmdTimerRef.current = null;
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.user?.id]);
@@ -288,7 +311,10 @@ function SmartWattPage() {
     if (!pending) return;
     if (status.device.actual_state === pending.desired) {
       pendingCmdRef.current = null;
-      if (cmdTimerRef.current) { clearTimeout(cmdTimerRef.current); cmdTimerRef.current = null; }
+      if (cmdTimerRef.current) {
+        clearTimeout(cmdTimerRef.current);
+        cmdTimerRef.current = null;
+      }
       setCypherState("success");
       const msg = pending.desired ? "The bulb is now on." : "The bulb is now off.";
       setCypherMsg(msg);
@@ -336,7 +362,10 @@ function SmartWattPage() {
       if (source === "voice") {
         setCypherState("error");
         setCypherMsg("I could not send the command. Please check your connection and try again.");
-        speak("I could not send the command. Please check your connection and try again.", speechEnabled);
+        speak(
+          "I could not send the command. Please check your connection and try again.",
+          speechEnabled,
+        );
       }
       return;
     }
@@ -380,7 +409,8 @@ function SmartWattPage() {
       case "TURN_OFF": {
         const next = intent === "TURN_ON";
         if (!dev.online) {
-          const msg = "The Smart Watt device is offline. Your command may remain pending until it reconnects.";
+          const msg =
+            "The Smart Watt device is offline. Your command may remain pending until it reconnects.";
           setCypherState("error");
           setCypherMsg(msg);
           speak(msg, speechEnabled);
@@ -686,9 +716,7 @@ function StateTile({ label, value, active }: { label: string; value: string; act
     <div
       className={cn(
         "rounded-xl border p-4 transition-colors",
-        active
-          ? "border-primary/40 bg-primary/10"
-          : "border-border bg-background/40",
+        active ? "border-primary/40 bg-primary/10" : "border-border bg-background/40",
       )}
     >
       <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">

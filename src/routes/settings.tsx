@@ -32,7 +32,11 @@ export const Route = createFileRoute("/settings")({
   head: () => ({
     meta: [
       { title: "Settings — SMART WATT" },
-      { name: "description", content: "Manage your SMART WATT account, device information, Cypher voice preferences and legal documents." },
+      {
+        name: "description",
+        content:
+          "Manage your SMART WATT account, device information, Cypher voice preferences and legal documents.",
+      },
     ],
   }),
   component: SettingsPage,
@@ -46,11 +50,17 @@ function useLocalPref(key: string, defaultValue: string) {
     try {
       const stored = localStorage.getItem(key);
       if (stored !== null) setV(stored);
-    } catch { /* noop */ }
+    } catch {
+      /* noop */
+    }
   }, [key]);
   function update(next: string) {
     setV(next);
-    try { localStorage.setItem(key, next); } catch { /* noop */ }
+    try {
+      localStorage.setItem(key, next);
+    } catch {
+      /* noop */
+    }
   }
   return [v, update] as const;
 }
@@ -75,7 +85,10 @@ function SettingsPage() {
       setAuthReady(true);
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setSession(s));
-    return () => { mounted = false; sub.subscription.unsubscribe(); };
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   useEffect(() => {
@@ -93,14 +106,21 @@ function SettingsPage() {
       .channel(`smart_watt_settings_${DEVICE_CODE}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "smart_watt_devices", filter: `device_code=eq.${DEVICE_CODE}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "smart_watt_devices",
+          filter: `device_code=eq.${DEVICE_CODE}`,
+        },
         (payload) => {
           const next = payload.new as SmartWattDevice | undefined;
           if (next) setDevice(next);
         },
       )
       .subscribe();
-    return () => { if (channel) supabase.removeChannel(channel); };
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, [session?.user?.id]);
 
   useEffect(() => {
@@ -109,11 +129,16 @@ function SettingsPage() {
       const perms = navigator.permissions as unknown as {
         query: (d: { name: string }) => Promise<{ state: string; onchange: (() => void) | null }>;
       };
-      perms.query({ name: "microphone" }).then((p) => {
-        setMicPerm(p.state);
-        p.onchange = () => setMicPerm(p.state);
-      }).catch(() => setMicPerm("unknown"));
-    } catch { setMicPerm("unknown"); }
+      perms
+        .query({ name: "microphone" })
+        .then((p) => {
+          setMicPerm(p.state);
+          p.onchange = () => setMicPerm(p.state);
+        })
+        .catch(() => setMicPerm("unknown"));
+    } catch {
+      setMicPerm("unknown");
+    }
   }, []);
 
   if (!authReady) {
@@ -128,7 +153,11 @@ function SettingsPage() {
     return (
       <div className="glass rounded-2xl border border-white/10 p-6 text-center">
         <p className="text-sm text-muted-foreground">
-          Please <Link to="/" className="text-primary hover:underline">sign in</Link> to view Settings.
+          Please{" "}
+          <Link to="/" className="text-primary hover:underline">
+            sign in
+          </Link>{" "}
+          to view Settings.
         </p>
       </div>
     );
@@ -143,13 +172,21 @@ function SettingsPage() {
         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-muted-foreground">
           SMART WATT
         </p>
-        <h1 className="mt-1 font-display text-2xl font-bold text-foreground sm:text-3xl">Settings</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Legal documents effective from July 2026.</p>
+        <h1 className="mt-1 font-display text-2xl font-bold text-foreground sm:text-3xl">
+          Settings
+        </h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Legal documents effective from July 2026.
+        </p>
       </header>
 
       {/* ACCOUNT */}
       <Section title="Account">
-        <Row icon={<UserIcon className="h-5 w-5" />} label={email} desc="Authenticated · SMART WATT session" />
+        <Row
+          icon={<UserIcon className="h-5 w-5" />}
+          label={email}
+          desc="Authenticated · SMART WATT session"
+        />
         <Row
           icon={<LogOut className="h-5 w-5" />}
           label="Sign out"
@@ -161,7 +198,11 @@ function SettingsPage() {
 
       {/* DEVICE */}
       <Section title="Device information">
-        <Row icon={<Zap className="h-5 w-5" />} label="BULB" desc={`Device code · ${DEVICE_CODE} (read-only)`} />
+        <Row
+          icon={<Zap className="h-5 w-5" />}
+          label="BULB"
+          desc={`Device code · ${DEVICE_CODE} (read-only)`}
+        />
         <Row
           icon={<Cpu className="h-5 w-5" />}
           label={device?.online ? "Online" : "Offline"}
@@ -172,7 +213,11 @@ function SettingsPage() {
           label={device?.updated_at ? new Date(device.updated_at).toLocaleString() : "—"}
           desc="Last update"
         />
-        <Row icon={<Info className="h-5 w-5" />} label="App version 1.0.0" desc="SMART WATT · Powered by NoskyTech" />
+        <Row
+          icon={<Info className="h-5 w-5" />}
+          label="App version 1.0.0"
+          desc="SMART WATT · Powered by NoskyTech"
+        />
       </Section>
 
       {/* CYPHER */}
@@ -180,7 +225,9 @@ function SettingsPage() {
         <Row
           icon={<Mic className="h-5 w-5" />}
           label="Voice control"
-          desc={supportsVoice ? "Enable Cypher microphone commands" : "Not supported in this browser"}
+          desc={
+            supportsVoice ? "Enable Cypher microphone commands" : "Not supported in this browser"
+          }
           control={
             <Toggle
               on={voice === "on" && supportsVoice}
@@ -240,7 +287,9 @@ function SettingsPage() {
           </span>
           <div className="min-w-0 flex-1">
             <p className="text-sm font-semibold text-foreground">Theme</p>
-            <p className="truncate text-xs text-muted-foreground">Premium dark experience by default</p>
+            <p className="truncate text-xs text-muted-foreground">
+              Premium dark experience by default
+            </p>
           </div>
           <select
             value={theme}
@@ -272,25 +321,55 @@ function SettingsPage() {
 
       {/* LEGAL */}
       <Section title="Legal">
-        <Row icon={<Shield className="h-5 w-5" />} label="Privacy Policy" desc="Effective July 2026" onClick={() => setLegal("privacy")} />
-        <Row icon={<FileText className="h-5 w-5" />} label="Terms of Use" desc="Effective July 2026" onClick={() => setLegal("terms")} />
-        <Row icon={<BookOpen className="h-5 w-5" />} label="Electrical Safety Notice" desc="Important safety information" onClick={() => setLegal("safety")} />
-        <Row icon={<Info className="h-5 w-5" />} label="About SMART WATT" desc="Product information" onClick={() => setLegal("about")} />
+        <Row
+          icon={<Shield className="h-5 w-5" />}
+          label="Privacy Policy"
+          desc="Effective July 2026"
+          onClick={() => setLegal("privacy")}
+        />
+        <Row
+          icon={<FileText className="h-5 w-5" />}
+          label="Terms of Use"
+          desc="Effective July 2026"
+          onClick={() => setLegal("terms")}
+        />
+        <Row
+          icon={<BookOpen className="h-5 w-5" />}
+          label="Electrical Safety Notice"
+          desc="Important safety information"
+          onClick={() => setLegal("safety")}
+        />
+        <Row
+          icon={<Info className="h-5 w-5" />}
+          label="About SMART WATT"
+          desc="Product information"
+          onClick={() => setLegal("about")}
+        />
       </Section>
 
       <footer className="pt-4 text-center text-[11px] text-muted-foreground">
         <p className="font-display text-sm font-bold tracking-widest text-foreground">SMART WATT</p>
         <p className="mt-1">Powered by NoskyTech</p>
         <div className="mt-3 flex flex-wrap justify-center gap-x-3 gap-y-1">
-          <button onClick={() => setLegal("privacy")} className="hover:text-foreground">Privacy Policy</button>
+          <button onClick={() => setLegal("privacy")} className="hover:text-foreground">
+            Privacy Policy
+          </button>
           <span>·</span>
-          <button onClick={() => setLegal("terms")} className="hover:text-foreground">Terms of Use</button>
+          <button onClick={() => setLegal("terms")} className="hover:text-foreground">
+            Terms of Use
+          </button>
           <span>·</span>
-          <button onClick={() => setLegal("safety")} className="hover:text-foreground">Electrical Safety</button>
+          <button onClick={() => setLegal("safety")} className="hover:text-foreground">
+            Electrical Safety
+          </button>
           <span>·</span>
-          <button onClick={() => setLegal("about")} className="hover:text-foreground">About</button>
+          <button onClick={() => setLegal("about")} className="hover:text-foreground">
+            About
+          </button>
           <span>·</span>
-          <a href="mailto:noskytech1@gmail.com" className="hover:text-foreground">Contact</a>
+          <a href="mailto:noskytech1@gmail.com" className="hover:text-foreground">
+            Contact
+          </a>
         </div>
         <p className="mt-4">© 2026 NoskyTech. All rights reserved.</p>
       </footer>
@@ -342,7 +421,12 @@ function Row({
         {icon}
       </span>
       <div className="min-w-0 flex-1 text-left">
-        <p className={cn("text-sm font-semibold", destructive ? "text-destructive" : "text-foreground")}>
+        <p
+          className={cn(
+            "text-sm font-semibold",
+            destructive ? "text-destructive" : "text-foreground",
+          )}
+        >
           {label}
         </p>
         {desc && <p className="truncate text-xs text-muted-foreground">{desc}</p>}

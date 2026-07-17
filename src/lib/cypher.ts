@@ -10,7 +10,11 @@ export type CypherIntent =
 
 /** Deterministic intent matcher — never route to a database write from natural language. */
 export function parseCypherIntent(raw: string): CypherIntent {
-  const t = raw.toLowerCase().trim().replace(/[^\w\s]/g, " ").replace(/\s+/g, " ");
+  const t = raw
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s]/g, " ")
+    .replace(/\s+/g, " ");
   if (!t) return "UNKNOWN";
 
   const has = (...words: string[]) => words.every((w) => t.includes(w));
@@ -19,17 +23,22 @@ export function parseCypherIntent(raw: string): CypherIntent {
   // TURN OFF (check before ON — "turn off" contains "on" trap avoided by order)
   if (
     (any("off") && any("bulb", "light", "it", "smart watt")) ||
-    has("switch", "off") || has("turn", "off") ||
-    has("power", "off") || has("put", "off") ||
-    has("shut", "down") || has("shut", "off")
+    has("switch", "off") ||
+    has("turn", "off") ||
+    has("power", "off") ||
+    has("put", "off") ||
+    has("shut", "down") ||
+    has("shut", "off")
   ) {
     return "TURN_OFF";
   }
 
   if (
     (any("on") && any("bulb", "light", "it", "smart watt")) ||
-    has("switch", "on") || has("turn", "on") ||
-    has("power", "on") || has("put", "on") ||
+    has("switch", "on") ||
+    has("turn", "on") ||
+    has("power", "on") ||
+    has("put", "on") ||
     has("light", "up")
   ) {
     return "TURN_ON";
@@ -44,8 +53,7 @@ export function parseCypherIntent(raw: string): CypherIntent {
   if (any("settings", "preferences")) return "OPEN_SETTINGS";
 
   if (any("safety", "electrical")) return "SAFETY_INFORMATION";
-  if (has("what", "can", "you", "do") || any("help") || has("how", "work"))
-    return "HELP";
+  if (has("what", "can", "you", "do") || any("help") || has("how", "work")) return "HELP";
 
   return "UNKNOWN";
 }

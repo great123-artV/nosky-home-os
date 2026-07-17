@@ -21,8 +21,7 @@ export function BulbVisual({
         transition={{ duration: 0.7, ease: "easeOut" }}
         className="absolute inset-0 rounded-full blur-3xl"
         style={{
-          background:
-            "radial-gradient(circle, oklch(0.9 0.14 85 / 0.55), transparent 60%)",
+          background: "radial-gradient(circle, oklch(0.9 0.14 85 / 0.55), transparent 60%)",
         }}
       />
       {/* Cool electric ring when online */}
@@ -49,11 +48,7 @@ export function BulbVisual({
       )}
 
       {/* Bulb SVG */}
-      <svg
-        viewBox="0 0 120 160"
-        className="relative h-40 w-40 sm:h-44 sm:w-44"
-        fill="none"
-      >
+      <svg viewBox="0 0 120 160" className="relative h-40 w-40 sm:h-44 sm:w-44" fill="none">
         <defs>
           <radialGradient id="bulbGlow" cx="50%" cy="45%" r="55%">
             <stop offset="0%" stopColor="oklch(0.98 0.12 90)" stopOpacity={on ? 1 : 0.05} />
@@ -88,10 +83,7 @@ export function BulbVisual({
         <rect x="44" y="112" width="32" height="8" rx="2" fill="oklch(0.4 0.02 260)" />
         <rect x="46" y="122" width="28" height="6" rx="1.5" fill="oklch(0.35 0.02 260)" />
         <rect x="48" y="130" width="24" height="6" rx="1.5" fill="oklch(0.3 0.02 260)" />
-        <path
-          d="M52 138 h16 l-4 8 h-8z"
-          fill="oklch(0.28 0.02 260)"
-        />
+        <path d="M52 138 h16 l-4 8 h-8z" fill="oklch(0.28 0.02 260)" />
       </svg>
     </div>
   );
