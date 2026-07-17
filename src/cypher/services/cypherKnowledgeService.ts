@@ -77,5 +77,5 @@ export const cypherKnowledgeService = {
 
   getNoConfirmationMessage(): string {
     return knowledgeData.fallback_rules.no_confirmation;
-  }
+  },
 };

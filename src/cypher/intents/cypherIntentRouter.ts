@@ -38,7 +38,21 @@ export function parseCypherIntent(raw: string): CypherIntent {
 
   // Unsupported Hardware commands check (vague hardware command we don't support)
   if (
-    any("fan", "heater", "air conditioner", "ac", "microwave", "fridge", "tv", "television", "charger", "plug", "socket", "outlet", "kettle") &&
+    any(
+      "fan",
+      "heater",
+      "air conditioner",
+      "ac",
+      "microwave",
+      "fridge",
+      "tv",
+      "television",
+      "charger",
+      "plug",
+      "socket",
+      "outlet",
+      "kettle",
+    ) &&
     any("on", "off", "turn", "switch", "status", "online")
   ) {
     return "UNKNOWN_HARDWARE";
@@ -48,7 +62,10 @@ export function parseCypherIntent(raw: string): CypherIntent {
   if (has("is", "bulb") || has("is", "light")) return "GET_BULB_STATUS";
   if (has("current", "state")) return "GET_BULB_STATUS";
 
-  if (any("online", "connected", "offline", "device status") && any("device", "smart watt", "bulb", "it")) {
+  if (
+    any("online", "connected", "offline", "device status") &&
+    any("device", "smart watt", "bulb", "it")
+  ) {
     return "GET_DEVICE_STATUS";
   }
 
@@ -56,13 +73,29 @@ export function parseCypherIntent(raw: string): CypherIntent {
   if (any("safety", "electrical", "wiring", "electric", "mains")) return "SAFETY_INFO";
 
   // 2. Knowledge-based intents
-  if (has("what", "noskytech") || has("who", "noskytech") || has("tell", "noskytech") || has("about", "noskytech")) {
+  if (
+    has("what", "noskytech") ||
+    has("who", "noskytech") ||
+    has("tell", "noskytech") ||
+    has("about", "noskytech")
+  ) {
     return "EXPLAIN_NOSKYTECH";
   }
-  if (has("what", "smart watt") || has("what", "smartwatt") || has("tell", "smart watt") || has("about", "smart watt")) {
+  if (
+    has("what", "smart watt") ||
+    has("what", "smartwatt") ||
+    has("tell", "smart watt") ||
+    has("about", "smart watt")
+  ) {
     return "EXPLAIN_SMARTWATT";
   }
-  if (has("what", "cypher") || has("who", "are", "you") || has("tell", "cypher") || has("about", "cypher") || has("your", "name")) {
+  if (
+    has("what", "cypher") ||
+    has("who", "are", "you") ||
+    has("tell", "cypher") ||
+    has("about", "cypher") ||
+    has("your", "name")
+  ) {
     return "EXPLAIN_CYPHER";
   }
   if (any("sign in", "login", "authenticate", "session", "how to sign")) {

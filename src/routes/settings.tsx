@@ -83,7 +83,7 @@ function SettingsPage() {
 
   // Cypher integrated configuration state
   const [cypherSettings, setCypherSettings] = useState<CypherSettings>(() =>
-    cypherSettingsService.getSettings()
+    cypherSettingsService.getSettings(),
   );
 
   const [theme, setTheme] = useLocalPref("sw.theme", "dark");
@@ -278,7 +278,9 @@ function SettingsPage() {
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">Wake Phrase</p>
-              <p className="truncate text-xs text-muted-foreground">Words that activate Always-On Cypher</p>
+              <p className="truncate text-xs text-muted-foreground">
+                Words that activate Always-On Cypher
+              </p>
             </div>
             <select
               value={cypherSettings.wakePhrase}
@@ -327,7 +329,9 @@ function SettingsPage() {
           control={
             <Toggle
               on={cypherSettings.browserVoiceFallback}
-              onChange={() => updateCypher({ browserVoiceFallback: !cypherSettings.browserVoiceFallback })}
+              onChange={() =>
+                updateCypher({ browserVoiceFallback: !cypherSettings.browserVoiceFallback })
+              }
               label="Browser voice fallback"
             />
           }
@@ -394,7 +398,10 @@ function SettingsPage() {
           label="Test Cypher voice"
           desc="Play a quick audio test using chosen path"
           onClick={() => {
-            void elevenLabsSpeechService.speak("This is Cypher, your premium NoskyTech voice assistant.", () => {});
+            void elevenLabsSpeechService.speak(
+              "This is Cypher, your premium NoskyTech voice assistant.",
+              () => {},
+            );
           }}
         />
       </Section>

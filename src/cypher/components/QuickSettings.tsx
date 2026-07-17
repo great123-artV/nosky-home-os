@@ -26,7 +26,9 @@ export function QuickSettings({ settings }: { settings: CypherSettings }) {
           <Mic className="h-4 w-4 text-primary" />
           <div>
             <p className="text-xs font-semibold text-foreground">Always-On Listening</p>
-            <p className="text-[10px] text-muted-foreground">Detect wake phrase: "{settings.wakePhrase}"</p>
+            <p className="text-[10px] text-muted-foreground">
+              Detect wake phrase: "{settings.wakePhrase}"
+            </p>
           </div>
         </div>
         <Toggle

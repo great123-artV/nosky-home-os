@@ -14,7 +14,8 @@ export function CypherFloatingButton({ cypher, onClick }: CypherFloatingButtonPr
   const isListening = state === "listening";
   const isBusy = state === "processing" || state === "executing";
   const isSpeaking = state === "speaking";
-  const isError = state === "offline" || state === "permission_required" || state === "microphone_disabled";
+  const isError =
+    state === "offline" || state === "permission_required" || state === "microphone_disabled";
 
   return (
     <div className="fixed bottom-20 right-4 z-40 sm:bottom-6 sm:right-6">
@@ -50,11 +51,15 @@ export function CypherFloatingButton({ cypher, onClick }: CypherFloatingButtonPr
           onClick={onClick}
           className={cn(
             "relative flex h-14 w-14 items-center justify-center rounded-full shadow-glow transition-all focus:outline-none focus:ring-2 focus:ring-primary/50",
-            isListening ? "bg-primary text-primary-foreground" :
-            isSpeaking ? "bg-primary text-primary-foreground" :
-            isError ? "bg-destructive text-destructive-foreground border border-destructive/50" :
-            settings.alwaysOnListening ? "bg-[#07101F] text-primary border border-primary/50 hover:bg-primary/10" :
-            "bg-[#07101F] text-foreground border border-white/10 hover:bg-white/[0.05]"
+            isListening
+              ? "bg-primary text-primary-foreground"
+              : isSpeaking
+                ? "bg-primary text-primary-foreground"
+                : isError
+                  ? "bg-destructive text-destructive-foreground border border-destructive/50"
+                  : settings.alwaysOnListening
+                    ? "bg-[#07101F] text-primary border border-primary/50 hover:bg-primary/10"
+                    : "bg-[#07101F] text-foreground border border-white/10 hover:bg-white/[0.05]",
           )}
           aria-label={isListening ? "Stop Cypher" : "Open Cypher menu"}
           title={isListening ? "Stop listening" : "Ask Cypher"}

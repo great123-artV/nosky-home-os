@@ -19,37 +19,34 @@ serve(async (req) => {
     if (!ELEVENLABS_API_KEY) {
       return new Response(
         JSON.stringify({ error: "ElevenLabs API key is not configured on the server." }),
-        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
 
     const { text, voice_id = "21m00Tcm4TlvDq8ikWAM" } = await req.json();
     if (!text) {
-      return new Response(
-        JSON.stringify({ error: "Missing 'text' input parameter." }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ error: "Missing 'text' input parameter." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // Call ElevenLabs TTS endpoint
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`,
-      {
-        method: "POST",
-        headers: {
-          "xi-api-key": ELEVENLABS_API_KEY,
-          "content-type": "application/json",
+    const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${voice_id}`, {
+      method: "POST",
+      headers: {
+        "xi-api-key": ELEVENLABS_API_KEY,
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        text,
+        model_id: "eleven_monolingual_v1",
+        voice_settings: {
+          stability: 0.75,
+          similarity_boost: 0.75,
         },
-        body: JSON.stringify({
-          text,
-          model_id: "eleven_monolingual_v1",
-          voice_settings: {
-            stability: 0.75,
-            similarity_boost: 0.75,
-          },
-        }),
-      }
-    );
+      }),
+    });
 
     if (!response.ok) {
       const errText = await response.text();
@@ -65,16 +62,15 @@ serve(async (req) => {
     }
     const base64Audio = btoa(binary);
 
-    return new Response(
-      JSON.stringify({ audio: base64Audio }),
-      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-    );
-
+    return new Response(JSON.stringify({ audio: base64Audio }), {
+      status: 200,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (error: any) {
     console.error("[CypherSpeechFunction] Error:", error);
     return new Response(
       JSON.stringify({ error: error.message || "Failed to process speech generation." }),
-      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
     );
   }
 });

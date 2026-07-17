@@ -10,7 +10,7 @@ export const elevenLabsSpeechService = {
    */
   async speak(
     text: string,
-    onStatus: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void
+    onStatus: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void,
   ): Promise<boolean> {
     this.stop();
 
@@ -66,7 +66,10 @@ export const elevenLabsSpeechService = {
           });
         }
       } catch (err) {
-        console.warn("[ElevenLabsSpeech] Primary speech failed, falling back to browser synthesis.", err);
+        console.warn(
+          "[ElevenLabsSpeech] Primary speech failed, falling back to browser synthesis.",
+          err,
+        );
       }
     }
 
@@ -76,7 +79,7 @@ export const elevenLabsSpeechService = {
 
   speakFallback(
     text: string,
-    onStatus: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void
+    onStatus: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void,
   ): Promise<boolean> {
     this.stop();
     onStatus("fallback");
