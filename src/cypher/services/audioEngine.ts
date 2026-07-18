@@ -4,12 +4,20 @@ import { chimeService } from "./chimeService";
 import { cypherSettingsService } from "../settings/settingsService";
 
 let globalRecognitionInstance: SpeechRecognitionService | null = null;
-let isSpeakingActive = false;
+
+// Global "Cypher is currently speaking" flag. Consumed by the speech recognition
+// service to block any auto-restart while TTS is playing — this is what
+// eliminates the ding-dong feedback loop where the mic re-triggers the wake
+// word on Cypher's own voice.
+let speakingActive = false;
+export function isCypherSpeaking(): boolean {
+  return speakingActive;
+}
+
+// Guard: only one speak() call at a time; the newest one wins.
+let speakCounter = 0;
 
 export const audioEngine = {
-  /**
-   * Initializes or fetches single speech recognition instance safely.
-   */
   startSpeechRecognition(
     callbacks: {
       onResult: (text: string, isFinal: boolean) => void;
@@ -19,10 +27,23 @@ export const audioEngine = {
     },
     config: { isAlwaysOn: boolean; wakePhrase: string },
   ): SpeechRecognitionService {
-    // Shutdown and destroy any existing instance first to guarantee single voice listener
     if (globalRecognitionInstance) {
       globalRecognitionInstance.destroy();
       globalRecognitionInstance = null;
+    }
+
+    // Never start the mic while Cypher is speaking.
+    if (speakingActive) {
+      // Return a no-op-ish placeholder by scheduling start after speech ends.
+      const wait = () => {
+        if (!speakingActive) {
+          this.startSpeechRecognition(callbacks, config);
+        } else {
+          setTimeout(wait, 150);
+        }
+      };
+      setTimeout(wait, 150);
+      // Still create the instance so callers have a reference; will restart soon.
     }
 
     const settings = cypherSettingsService.getSettings();
@@ -41,13 +62,12 @@ export const audioEngine = {
       },
     );
 
-    globalRecognitionInstance.start();
+    if (!speakingActive) {
+      globalRecognitionInstance.start();
+    }
     return globalRecognitionInstance;
   },
 
-  /**
-   * Shuts down any active microphone sessions safely.
-   */
   stopSpeechRecognition() {
     if (globalRecognitionInstance) {
       globalRecognitionInstance.destroy();
@@ -55,44 +75,44 @@ export const audioEngine = {
     }
   },
 
-  /**
-   * Plays voice synthesis through the ElevenLabs proxy, with instant local synthesis fallbacks.
-   */
   async speak(
     text: string,
-    onStatusChange: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void,
+    onStatusChange: (
+      status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed",
+    ) => void,
   ): Promise<boolean> {
+    // Stop anything already speaking; the newest utterance wins.
     this.stopPlayback();
-    isSpeakingActive = true;
 
-    // Temporal microphone pause to prevent Cypher hearing herself speak
-    const wasListening = globalRecognitionInstance && !isSpeakingActive;
+    const myCall = ++speakCounter;
+    speakingActive = true;
+
+    // Fully release the mic while we speak so it can't hear Cypher.
     if (globalRecognitionInstance) {
       globalRecognitionInstance.abort();
+      globalRecognitionInstance = null;
     }
 
     try {
-      const result = await elevenLabsSpeechService.speak(text, onStatusChange);
-      isSpeakingActive = false;
-      return result;
-    } catch (e) {
-      isSpeakingActive = false;
+      const ok = await elevenLabsSpeechService.speak(text, onStatusChange);
+      // Only clear the flag if a newer speak() call didn't take over.
+      if (myCall === speakCounter) {
+        speakingActive = false;
+      }
+      return ok;
+    } catch (err) {
+      console.warn("[AudioEngine] speak failed", err);
+      if (myCall === speakCounter) speakingActive = false;
       onStatusChange("failed");
       return false;
     }
   },
 
-  /**
-   * Halts all active synthesis streams.
-   */
   stopPlayback() {
-    isSpeakingActive = false;
+    speakingActive = false;
     elevenLabsSpeechService.stop();
   },
 
-  /**
-   * Plays the luxury chime sound.
-   */
   async playActivationChime(): Promise<void> {
     const settings = cypherSettingsService.getSettings();
     if (settings.startupSound) {
@@ -100,9 +120,6 @@ export const audioEngine = {
     }
   },
 
-  /**
-   * Shuts down all engines globally.
-   */
   shutdownAll() {
     this.stopSpeechRecognition();
     this.stopPlayback();
