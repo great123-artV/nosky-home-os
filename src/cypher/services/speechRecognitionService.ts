@@ -1,4 +1,7 @@
 import { getSpeechRecognitionCtor } from "@/lib/cypher";
+import { isCypherSpeaking } from "./audioEngine";
+
+
 
 export interface SpeechRecognitionEvents {
   onResult: (transcript: string, isFinal: boolean) => void;
