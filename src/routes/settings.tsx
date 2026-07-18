@@ -84,9 +84,54 @@ function SettingsPage() {
 
   const [theme, setTheme] = useLocalPref("sw.theme", "dark");
 
+  const [elevenLabsStatus, setElevenLabsStatus] = useState<{
+    configured: boolean;
+    voiceId: string;
+    modelId: string;
+    loading: boolean;
+  }>({
+    configured: false,
+    voiceId: "",
+    modelId: "",
+    loading: true,
+  });
+
   useEffect(() => {
     const unsub = cypherSettingsService.subscribe(setCypherSettings);
     return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    fetch("/api/public/cypher-tts")
+      .then((res) => {
+        if (!res.ok) throw new Error("Status check failed");
+        return res.json() as Promise<{ configured: boolean; voiceId: string; modelId: string }>;
+      })
+      .then((data) => {
+        if (active) {
+          setElevenLabsStatus({
+            configured: data.configured,
+            voiceId: data.voiceId,
+            modelId: data.modelId,
+            loading: false,
+          });
+        }
+      })
+      .catch((err) => {
+        console.warn("[Settings] ElevenLabs status fetch failed", err);
+        if (active) {
+          setElevenLabsStatus({
+            configured: false,
+            voiceId: "",
+            modelId: "",
+            loading: false,
+          });
+        }
+      });
+    return () => {
+      active = false;
+    };
   }, []);
 
   const updateCypher = (val: Partial<CypherSettings>) => {
@@ -249,16 +294,107 @@ function SettingsPage() {
           </div>
         )}
 
-        {/* Spoken feedback */}
+        {/* Voice System Details & Status Card */}
+        <div className="mx-5 my-4 rounded-xl border border-white/5 bg-background/20 p-4 space-y-3.5">
+          <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
+            <h3 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+              Voice System Status
+            </h3>
+            {elevenLabsStatus.loading ? (
+              <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                <Loader2 className="h-3 w-3 animate-spin text-primary" /> Checking...
+              </span>
+            ) : elevenLabsStatus.configured && sessionCtx.networkOnline ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-semibold text-emerald-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                Connected
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/15 px-2 py-0.5 text-[10px] font-semibold text-amber-400">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-400 animate-pulse" />
+                Offline
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-y-2.5 gap-x-4 text-xs">
+            <div>
+              <p className="text-muted-foreground font-medium">Voice Provider</p>
+              <p className="text-foreground font-semibold mt-0.5">
+                {elevenLabsStatus.loading
+                  ? "—"
+                  : elevenLabsStatus.configured && sessionCtx.networkOnline
+                    ? "ElevenLabs (Premium)"
+                    : "Web Speech API (Fallback)"}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground font-medium">Premium Voice</p>
+              <p className="text-foreground font-semibold mt-0.5">
+                {elevenLabsStatus.loading
+                  ? "—"
+                  : elevenLabsStatus.configured && sessionCtx.networkOnline
+                    ? "Sarah (Premium Default)"
+                    : "Device Default"}
+              </p>
+            </div>
+            <div className="col-span-2 border-t border-white/5 pt-2.5">
+              <p className="text-muted-foreground font-medium">Voice Status</p>
+              {elevenLabsStatus.loading ? (
+                <p className="text-muted-foreground mt-0.5">Determining status...</p>
+              ) : elevenLabsStatus.configured && sessionCtx.networkOnline ? (
+                cypherSettings.browserVoiceFallback ? (
+                  <p className="text-amber-400 font-semibold mt-0.5">
+                    Using device voice (fallback forced by user)
+                  </p>
+                ) : (
+                  <p className="text-emerald-400 font-semibold mt-0.5">
+                    Premium voice active
+                  </p>
+                )
+              ) : (
+                <p className="text-amber-400 font-semibold mt-0.5">
+                  Premium voice unavailable. Using device voice.
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Premium Voice Selector (Future-ready) */}
+        <div className="flex flex-col gap-3 px-5 py-4">
+          <div className="flex items-center gap-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+              <Sparkles className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Premium Voice Profile</p>
+              <p className="truncate text-xs text-muted-foreground">
+                Select your preferred premium voice style
+              </p>
+            </div>
+            <select
+              value="premium_default"
+              disabled
+              className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none opacity-80"
+            >
+              <option value="premium_default">Premium (Default)</option>
+              <option value="premium_futuristic" disabled>Futuristic (Coming Soon)</option>
+              <option value="premium_warm" disabled>Warm Male (Coming Soon)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Spoken feedback (Mute Cypher) */}
         <Row
           icon={<Volume2 className="h-5 w-5" />}
-          label="Voice responses"
-          desc="Cypher speaks confirmation and status aloud"
+          label="Mute Cypher"
+          desc="Enable or disable voice responses from Cypher"
           control={
             <Toggle
-              on={cypherSettings.voiceResponses}
+              on={!cypherSettings.voiceResponses}
               onChange={() => updateCypher({ voiceResponses: !cypherSettings.voiceResponses })}
-              label="Voice responses"
+              label="Mute Cypher"
             />
           }
         />
@@ -280,7 +416,7 @@ function SettingsPage() {
         {/* Browser Voice Fallback (ElevenLabs proxy vs Web Speech API) */}
         <Row
           icon={<Globe className="h-5 w-5" />}
-          label="Browser voice fallback"
+          label="Use Browser Voice (Fallback)"
           desc="Force local SpeechSynthesis voice instead of ElevenLabs proxy"
           control={
             <Toggle
@@ -288,7 +424,7 @@ function SettingsPage() {
               onChange={() =>
                 updateCypher({ browserVoiceFallback: !cypherSettings.browserVoiceFallback })
               }
-              label="Browser voice fallback"
+              label="Use Browser Voice (Fallback)"
             />
           }
         />
@@ -351,7 +487,7 @@ function SettingsPage() {
 
         <Row
           icon={<Volume2 className="h-5 w-5" />}
-          label="Test Cypher voice"
+          label="Test Voice"
           desc="Play a quick audio test using chosen path"
           onClick={() => {
             void elevenLabsSpeechService.speak(
