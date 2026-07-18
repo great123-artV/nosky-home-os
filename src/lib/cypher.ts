@@ -66,10 +66,12 @@ type SR = {
   start: () => void;
   stop: () => void;
   abort: () => void;
+  onstart: (() => void) | null;
   onresult: ((e: unknown) => void) | null;
   onerror: ((e: unknown) => void) | null;
   onend: (() => void) | null;
 };
+
 
 export function getSpeechRecognitionCtor(): (new () => SR) | null {
   if (typeof window === "undefined") return null;

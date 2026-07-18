@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicCypherTtsRouteImport } from './routes/api/public/cypher-tts'
 
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
@@ -28,35 +29,44 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCypherTtsRoute = ApiPublicCypherTtsRouteImport.update({
+  id: '/api/public/cypher-tts',
+  path: '/api/public/cypher-tts',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/public/cypher-tts': typeof ApiPublicCypherTtsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/public/cypher-tts': typeof ApiPublicCypherTtsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/settings': typeof SettingsRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/api/public/cypher-tts': typeof ApiPublicCypherTtsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/settings' | '/sitemap.xml'
+  fullPaths: '/' | '/settings' | '/sitemap.xml' | '/api/public/cypher-tts'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings' | '/sitemap.xml'
-  id: '__root__' | '/' | '/settings' | '/sitemap.xml'
+  to: '/' | '/settings' | '/sitemap.xml' | '/api/public/cypher-tts'
+  id: '__root__' | '/' | '/settings' | '/sitemap.xml' | '/api/public/cypher-tts'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   SettingsRoute: typeof SettingsRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  ApiPublicCypherTtsRoute: typeof ApiPublicCypherTtsRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -82,6 +92,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/cypher-tts': {
+      id: '/api/public/cypher-tts'
+      path: '/api/public/cypher-tts'
+      fullPath: '/api/public/cypher-tts'
+      preLoaderRoute: typeof ApiPublicCypherTtsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -89,17 +106,8 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   SettingsRoute: SettingsRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  ApiPublicCypherTtsRoute: ApiPublicCypherTtsRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
