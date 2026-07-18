@@ -115,7 +115,15 @@ export class SpeechRecognitionService {
   private handleAlwaysOnRestart() {
     if (this.isDeactivated) return;
 
-    // Exponential retry backing off if we keep failing immediately
+    // Never restart while Cypher is speaking — this is what stops the
+    // ding-dong feedback loop where the mic re-hears the wake word on
+    // Cypher's own voice.
+    if (isCypherSpeaking()) {
+      if (this.restartTimeout) clearTimeout(this.restartTimeout);
+      this.restartTimeout = setTimeout(() => this.handleAlwaysOnRestart(), 400);
+      return;
+    }
+
     const backoff = Math.min(1000 * Math.pow(2, this.retryCount), 10000);
     this.retryCount++;
 
@@ -133,6 +141,7 @@ export class SpeechRecognitionService {
       this.start();
     }, backoff);
   }
+
 
   public start() {
     if (this.recognition && !this.isListening) {
