@@ -3,14 +3,27 @@
 // reaches the browser. Public route by convention — no auth required.
 import { createFileRoute } from "@tanstack/react-router";
 
-const VOICE_ID = "EXAVITQu4vr4xnSDxMaL"; // Sarah — warm, natural
-const MODEL_ID = "eleven_turbo_v2_5";
-
 export const Route = createFileRoute("/api/public/cypher-tts")({
   server: {
     handlers: {
+      GET: async () => {
+        const apiKey = process.env.ELEVENLABS_API_KEY;
+        const voiceId = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
+        const modelId = process.env.ELEVENLABS_MODEL_ID || "eleven_turbo_v2_5";
+        return new Response(
+          JSON.stringify({
+            configured: !!apiKey,
+            voiceId,
+            modelId,
+          }),
+          { status: 200, headers: { "content-type": "application/json" } }
+        );
+      },
       POST: async ({ request }) => {
         const apiKey = process.env.ELEVENLABS_API_KEY;
+        const voiceId = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
+        const modelId = process.env.ELEVENLABS_MODEL_ID || "eleven_turbo_v2_5";
+
         if (!apiKey) {
           return new Response(
             JSON.stringify({ error: "ElevenLabs is not configured on this server." }),
@@ -36,7 +49,7 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
 
         try {
           const upstream = await fetch(
-            `https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}?output_format=mp3_44100_128`,
+            `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}?output_format=mp3_44100_128`,
             {
               method: "POST",
               headers: {
@@ -46,11 +59,11 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
               },
               body: JSON.stringify({
                 text,
-                model_id: MODEL_ID,
+                model_id: modelId,
                 voice_settings: {
-                  stability: 0.55,
-                  similarity_boost: 0.8,
-                  style: 0.25,
+                  stability: 0.65,
+                  similarity_boost: 0.85,
+                  style: 0.15,
                   use_speaker_boost: true,
                 },
               }),

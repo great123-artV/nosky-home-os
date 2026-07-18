@@ -1,23 +1,45 @@
 import { cypherSettingsService } from "../settings/settingsService";
 
-// Cached blob URLs for identical utterances (avoids repeat API calls & billing).
+// Safe, reusable system phrases that are completely free from dynamic/personalized data
+const SAFE_PHRASES = new Set([
+  "The bulb is now on.",
+  "The bulb is now off.",
+  "Your device is offline.",
+  "Please sign in.",
+  "I didn't hear anything.",
+  "Microphone access is blocked.",
+]);
+
+// Cached blob URLs for identical safe system utterances (avoids repeat API calls & billing).
 const utteranceCache = new Map<string, string>();
 const CACHE_LIMIT = 40;
 
 let currentAudio: HTMLAudioElement | null = null;
 let fallbackUtterance: SpeechSynthesisUtterance | null = null;
+let activeAbortController: AbortController | null = null;
 
 type Status = "elevenlabs" | "fallback" | "playing" | "stopped" | "failed";
 
 async function fetchElevenLabsAudio(text: string): Promise<string | null> {
-  const cached = utteranceCache.get(text);
-  if (cached) return cached;
+  const isSafeToCache = SAFE_PHRASES.has(text);
+  if (isSafeToCache) {
+    const cached = utteranceCache.get(text);
+    if (cached) return cached;
+  }
+
+  // Cancel any obsolete in-flight requests before starting a new one
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+  const signal = activeAbortController.signal;
 
   try {
     const res = await fetch("/api/public/cypher-tts", {
       method: "POST",
       headers: { "content-type": "application/json" },
       body: JSON.stringify({ text }),
+      signal,
     });
     if (!res.ok) {
       console.warn("[ElevenLabsSpeech] Server responded", res.status);
@@ -27,19 +49,29 @@ async function fetchElevenLabsAudio(text: string): Promise<string | null> {
     if (!blob.size) return null;
     const url = URL.createObjectURL(blob);
 
-    if (utteranceCache.size >= CACHE_LIMIT) {
-      const firstKey = utteranceCache.keys().next().value;
-      if (firstKey !== undefined) {
-        const oldUrl = utteranceCache.get(firstKey);
-        if (oldUrl) URL.revokeObjectURL(oldUrl);
-        utteranceCache.delete(firstKey);
+    if (isSafeToCache) {
+      if (utteranceCache.size >= CACHE_LIMIT) {
+        const firstKey = utteranceCache.keys().next().value;
+        if (firstKey !== undefined) {
+          const oldUrl = utteranceCache.get(firstKey);
+          if (oldUrl) URL.revokeObjectURL(oldUrl);
+          utteranceCache.delete(firstKey);
+        }
       }
+      utteranceCache.set(text, url);
     }
-    utteranceCache.set(text, url);
     return url;
-  } catch (err) {
-    console.warn("[ElevenLabsSpeech] fetch failed", err);
+  } catch (err: any) {
+    if (err.name === "AbortError") {
+      console.log("[ElevenLabsSpeech] Fetch request cancelled because a newer response replaced it.");
+    } else {
+      console.warn("[ElevenLabsSpeech] fetch failed", err);
+    }
     return null;
+  } finally {
+    if (activeAbortController?.signal === signal) {
+      activeAbortController = null;
+    }
   }
 }
 
@@ -125,6 +157,10 @@ export const elevenLabsSpeechService = {
   },
 
   stop() {
+    if (activeAbortController) {
+      activeAbortController.abort();
+      activeAbortController = null;
+    }
     if (currentAudio) {
       try {
         currentAudio.pause();

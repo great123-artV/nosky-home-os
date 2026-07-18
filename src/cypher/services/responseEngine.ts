@@ -27,22 +27,35 @@ export const responseEngine = {
       };
     }
 
+    // Map long error messages to concise, natural spoken phrases
+    const getConciseSpokenError = (msg?: string | null) => {
+      if (!msg) return "I couldn't reach your SMART WATT device.";
+      const lower = msg.toLowerCase();
+      if (lower.includes("sign in") || lower.includes("login") || lower.includes("authenticate")) {
+        return "Please sign in.";
+      }
+      if (lower.includes("offline") || lower.includes("internet") || lower.includes("connection")) {
+        return "Your device is offline.";
+      }
+      return "I couldn't reach your SMART WATT device.";
+    };
+
     // Default template mappings
     switch (intent) {
       case "TURN_ON":
         if (status === "success") {
           return {
-            spokenText: "The SMART WATT bulb has been turned on.",
+            spokenText: "The bulb is now on.",
             uiText: "Living room bulb has successfully switched ON.",
           };
         } else if (status === "pending") {
           return {
-            spokenText: "Turning the bulb on. Waiting for device handshake...",
+            spokenText: "Toggling device.",
             uiText: "Sending command... Awaiting actual state handshake from physical device.",
           };
         } else {
           return {
-            spokenText: context.errorMsg || "I couldn't toggle the bulb. Please verify your connection status.",
+            spokenText: getConciseSpokenError(context.errorMsg),
             uiText: `Command failed: ${context.errorMsg || "No response received from the ESP32 controller."}`,
           };
         }
@@ -50,58 +63,58 @@ export const responseEngine = {
       case "TURN_OFF":
         if (status === "success") {
           return {
-            spokenText: "The SMART WATT bulb is now turned off.",
+            spokenText: "The bulb is now off.",
             uiText: "Living room bulb has successfully switched OFF.",
           };
         } else if (status === "pending") {
           return {
-            spokenText: "Turning the bulb off. Waiting for device handshake...",
+            spokenText: "Toggling device.",
             uiText: "Sending command... Awaiting actual state handshake from physical device.",
           };
         } else {
           return {
-            spokenText: context.errorMsg || "I couldn't turn the bulb off. Please check if it's plugged in.",
+            spokenText: getConciseSpokenError(context.errorMsg),
             uiText: `Command failed: ${context.errorMsg || "No response received from the ESP32 controller."}`,
           };
         }
 
       case "GET_BULB_STATUS": {
-        const stateStr = context.actualState ? "ON" : "OFF";
+        const stateStr = context.actualState ? "on" : "off";
         return {
-          spokenText: `Your SMART WATT bulb is currently ${stateStr}.`,
-          uiText: `Bulb physical state is confirmed ${stateStr}.`,
+          spokenText: `The bulb is ${stateStr}.`,
+          uiText: `Bulb physical state is confirmed ${stateStr.toUpperCase()}.`,
         };
       }
 
       case "GET_DEVICE_STATUS": {
-        const statusStr = context.deviceOnline ? "active and online" : "currently offline";
+        const statusStr = context.deviceOnline ? "Your device is online." : "Your device is offline.";
         return {
-          spokenText: `Your SMART WATT controller is ${statusStr}.`,
+          spokenText: statusStr,
           uiText: `Controller node is ${context.deviceOnline ? "ONLINE" : "OFFLINE"}.`,
         };
       }
 
       case "GUIDE_SIGNIN":
         return {
-          spokenText: "To sign in, locate the email and password fields on the main page, input your credentials, and click Sign In.",
+          spokenText: "Please sign in.",
           uiText: "Hardware control requires a verified session. Enter your credentials on the Home page to authenticate.",
         };
 
       case "HELP":
         return {
-          spokenText: "I can control your SMART WATT bulb, report telemetry status, navigate pages, and answer questions about NoskyTech.",
+          spokenText: "I can control your bulb, show status, or answer questions.",
           uiText: "Try saying:\n• 'Turn on the bulb'\n• 'Is the device online?'\n• 'What is SMART WATT?'\n• 'Open settings'",
         };
 
       case "CONVERSATION":
         return {
-          spokenText: "Hello! I am Cypher, your SMART WATT voice layer. How can I assist you with your home automation today?",
-          uiText: "Hello! I'm Cypher. Let me know if you need help controlling hardware or configuring settings.",
+          spokenText: "Welcome back. Your SMART WATT system is ready.",
+          uiText: "Welcome back! I'm Cypher, your SMART WATT operating voice assistant. Ready for your instructions.",
         };
 
       case "UNKNOWN_HARDWARE":
         return {
-          spokenText: "That appliance is not supported in this version of SMART WATT.",
+          spokenText: "That device is not available in this version of SMART WATT.",
           uiText: "Unsupported Hardware: Only single-relay bulb control is currently available.",
         };
 
@@ -113,7 +126,7 @@ export const responseEngine = {
           };
         }
         return {
-          spokenText: "I didn't understand that command. Please try again.",
+          spokenText: "I didn't hear anything.",
           uiText: "Command unrecognized. Please check suggestions inside the Cypher drawer.",
         };
     }

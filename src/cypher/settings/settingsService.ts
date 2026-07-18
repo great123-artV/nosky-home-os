@@ -10,7 +10,7 @@ const defaultSettings: CypherSettings = {
   voiceVolume: 0.8,
   speechRate: 1.0,
   startupSound: true,
-  browserVoiceFallback: true,
+  browserVoiceFallback: false,
   conversationHistoryEnabled: true,
 };
 
