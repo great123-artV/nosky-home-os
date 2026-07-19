@@ -555,6 +555,10 @@ function RootInner() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const sessionCtx = useSessionContext();
 
+  useEffect(() => {
+    registerPWA();
+  }, []);
+
   // Initialize unified global Cypher brain hook
   const cypher = useCypher();
 
