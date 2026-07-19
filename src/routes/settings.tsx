@@ -207,6 +207,15 @@ function SettingsPage() {
           label={email}
           desc="Authenticated · SMART WATT session"
         />
+        <div className="p-4 flex items-center justify-between gap-3 border-t border-white/[0.04]">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Install as an app</p>
+            <p className="text-[11px] text-muted-foreground">
+              Add SMART WATT to your Home Screen for a native-app experience.
+            </p>
+          </div>
+          <InstallPwaButton variant="primary" label="Install" />
+        </div>
         <Row
           icon={<LogOut className="h-5 w-5" />}
           label="Sign out"
@@ -215,6 +224,7 @@ function SettingsPage() {
           destructive
         />
       </Section>
+
 
       {/* DEVICE */}
       <Section title="Device information">
