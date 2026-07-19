@@ -8,7 +8,7 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
     handlers: {
       GET: async () => {
         const apiKey = process.env.ELEVENLABS_API_KEY;
-        const voiceId = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
+        const voiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // Fallback to Rachel (More natural premium default)
         const modelId = process.env.ELEVENLABS_MODEL_ID || "eleven_turbo_v2_5";
         return new Response(
           JSON.stringify({
@@ -21,8 +21,8 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
       },
       POST: async ({ request }) => {
         const apiKey = process.env.ELEVENLABS_API_KEY;
-        const voiceId = process.env.ELEVENLABS_VOICE_ID || "EXAVITQu4vr4xnSDxMaL";
-        const modelId = process.env.ELEVENLABS_MODEL_ID || "eleven_turbo_v2_5";
+        const defaultVoiceId = process.env.ELEVENLABS_VOICE_ID || "21m00Tcm4TlvDq8ikWAM"; // Rachel as default
+        const defaultModelId = process.env.ELEVENLABS_MODEL_ID || "eleven_turbo_v2_5";
 
         if (!apiKey) {
           return new Response(
@@ -32,9 +32,13 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
         }
 
         let text = "";
+        let voiceId = defaultVoiceId;
+        let modelId = defaultModelId;
         try {
-          const body = (await request.json()) as { text?: unknown };
+          const body = (await request.json()) as { text?: unknown; voiceId?: unknown; modelId?: unknown };
           if (typeof body?.text === "string") text = body.text.trim();
+          if (typeof body?.voiceId === "string" && body.voiceId.trim()) voiceId = body.voiceId.trim();
+          if (typeof body?.modelId === "string" && body.modelId.trim()) modelId = body.modelId.trim();
         } catch {
           /* noop */
         }
