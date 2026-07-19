@@ -21,14 +21,9 @@ let activeAbortController: AbortController | null = null;
 type Status = "elevenlabs" | "fallback" | "playing" | "stopped" | "failed";
 
 async function fetchElevenLabsAudio(text: string): Promise<string | null> {
-  const settings = cypherSettingsService.getSettings();
-  const voiceId = settings.voiceId || "21m00Tcm4TlvDq8ikWAM";
-  const modelId = settings.modelId || "eleven_turbo_v2_5";
-
   const isSafeToCache = SAFE_PHRASES.has(text);
-  const cacheKey = `${voiceId}:${modelId}:${text}`;
   if (isSafeToCache) {
-    const cached = utteranceCache.get(cacheKey);
+    const cached = utteranceCache.get(text);
     if (cached) return cached;
   }
 
@@ -43,7 +38,7 @@ async function fetchElevenLabsAudio(text: string): Promise<string | null> {
     const res = await fetch("/api/public/cypher-tts", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ text, voiceId, modelId }),
+      body: JSON.stringify({ text }),
       signal,
     });
     if (!res.ok) {
@@ -63,7 +58,7 @@ async function fetchElevenLabsAudio(text: string): Promise<string | null> {
           utteranceCache.delete(firstKey);
         }
       }
-      utteranceCache.set(cacheKey, url);
+      utteranceCache.set(text, url);
     }
     return url;
   } catch (err: any) {

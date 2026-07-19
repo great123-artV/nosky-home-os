@@ -12,8 +12,6 @@ const defaultSettings: CypherSettings = {
   startupSound: true,
   browserVoiceFallback: false,
   conversationHistoryEnabled: true,
-  voiceId: "21m00Tcm4TlvDq8ikWAM", // Rachel (More natural premium default)
-  modelId: "eleven_turbo_v2_5", // Eleven Turbo v2.5 (Fast & premium default)
 };
 
 type SettingsListener = (settings: CypherSettings) => void;
