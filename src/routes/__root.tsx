@@ -33,6 +33,8 @@ import { SessionProvider, useSessionContext } from "@/cypher/context/SessionCont
 import { useCypher } from "@/cypher/hooks/useCypher";
 import { CypherFloatingButton } from "@/cypher/components/CypherFloatingButton";
 import { CypherDrawer } from "@/cypher/components/CypherDrawer";
+import { registerPWA } from "@/lib/pwa-register";
+import { InstallPwaButton } from "@/components/install-pwa";
 
 function NotFoundComponent() {
   return (
