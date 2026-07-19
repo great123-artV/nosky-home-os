@@ -460,6 +460,12 @@ function TopBar({
           )}
 
           {isAuthenticated && (
+            <div className="hidden sm:block">
+              <InstallPwaButton variant="compact" label="Install" />
+            </div>
+          )}
+
+          {isAuthenticated && (
             <button
               onClick={() => supabase.auth.signOut()}
               className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
