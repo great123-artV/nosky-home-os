@@ -36,6 +36,7 @@ import { cypherSettingsService } from "@/cypher/settings/settingsService";
 import { cypherHistoryService } from "@/cypher/history/historyService";
 import { elevenLabsSpeechService } from "@/cypher/services/elevenLabsSpeechService";
 import { Slider } from "@/components/ui/slider";
+import { InstallPwaButton } from "@/components/install-pwa";
 
 export const Route = createFileRoute("/settings")({
   ssr: false,
