@@ -31,6 +31,9 @@ import { cn } from "@/lib/utils";
 import { BulbVisual } from "@/components/bulb";
 import { LegalModal } from "@/components/legal-modal";
 import type { LegalDoc } from "@/lib/legal";
+import { InstallPwaButton } from "@/components/install-pwa";
+import { OfflineBanner, useLiveControlAvailable } from "@/components/offline-banner";
+import { useOnline } from "@/hooks/use-online";
 
 // Cypher integration
 import { useSessionContext } from "@/cypher/context/SessionContext";
