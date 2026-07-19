@@ -33,6 +33,8 @@ import { SessionProvider, useSessionContext } from "@/cypher/context/SessionCont
 import { useCypher } from "@/cypher/hooks/useCypher";
 import { CypherFloatingButton } from "@/cypher/components/CypherFloatingButton";
 import { CypherDrawer } from "@/cypher/components/CypherDrawer";
+import { registerPWA } from "@/lib/pwa-register";
+import { InstallPwaButton } from "@/components/install-pwa";
 
 function NotFoundComponent() {
   return (
@@ -109,6 +111,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     links: [
       { rel: "preload", href: "/tesla-splash.webp", as: "image", type: "image/webp" },
       { rel: "stylesheet", href: appCss },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "icon", type: "image/png", sizes: "32x32", href: "/favicon-32.png" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
+      { rel: "apple-touch-icon", sizes: "180x180", href: "/apple-touch-icon.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {
@@ -454,6 +460,12 @@ function TopBar({
           )}
 
           {isAuthenticated && (
+            <div className="hidden sm:block">
+              <InstallPwaButton variant="compact" label="Install" />
+            </div>
+          )}
+
+          {isAuthenticated && (
             <button
               onClick={() => supabase.auth.signOut()}
               className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
@@ -548,6 +560,10 @@ function RootInner() {
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const sessionCtx = useSessionContext();
+
+  useEffect(() => {
+    registerPWA();
+  }, []);
 
   // Initialize unified global Cypher brain hook
   const cypher = useCypher();
