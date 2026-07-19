@@ -417,9 +417,14 @@ function SmartWattPage() {
 
   const pending = sessionCtx.pendingCommand !== null;
   const confirmedOn = sessionCtx.actualState ?? false;
+  const online = typeof navigator !== "undefined" ? navigator.onLine : true;
+  const liveControlOk =
+    online && sessionCtx.deviceOnline && (sessionCtx.realtimeConnected || sessionCtx.simulationMode);
 
   return (
     <div className="w-full space-y-6 animate-fade-in">
+      <OfflineBanner />
+
       {/* Simulation Banner Notice (Requirement 5) */}
       {sessionCtx.simulationMode && (
         <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-4 flex items-center justify-between shadow-glow">
