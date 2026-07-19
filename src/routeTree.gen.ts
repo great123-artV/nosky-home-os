@@ -9,19 +9,43 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WelcomeRouteImport } from './routes/welcome'
+import { Route as VerifyProductRouteImport } from './routes/verify-product'
 import { Route as SitemapDotxmlRouteImport } from './routes/sitemap[.]xml'
+import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as EcosystemRouteImport } from './routes/ecosystem'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ApiPublicCypherTtsRouteImport } from './routes/api/public/cypher-tts'
 
+const WelcomeRoute = WelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VerifyProductRoute = VerifyProductRouteImport.update({
+  id: '/verify-product',
+  path: '/verify-product',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SitemapDotxmlRoute = SitemapDotxmlRouteImport.update({
   id: '/sitemap.xml',
   path: '/sitemap.xml',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SettingsRoute = SettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EcosystemRoute = EcosystemRouteImport.update({
+  id: '/ecosystem',
+  path: '/ecosystem',
   getParentRoute: () => rootRouteImport,
 } as any)
 const IndexRoute = IndexRouteImport.update({
@@ -37,40 +61,95 @@ const ApiPublicCypherTtsRoute = ApiPublicCypherTtsRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/ecosystem': typeof EcosystemRoute
   '/settings': typeof SettingsRoute
+  '/sign-in': typeof SignInRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/verify-product': typeof VerifyProductRoute
+  '/welcome': typeof WelcomeRoute
   '/api/public/cypher-tts': typeof ApiPublicCypherTtsRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/ecosystem': typeof EcosystemRoute
   '/settings': typeof SettingsRoute
+  '/sign-in': typeof SignInRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/verify-product': typeof VerifyProductRoute
+  '/welcome': typeof WelcomeRoute
   '/api/public/cypher-tts': typeof ApiPublicCypherTtsRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/ecosystem': typeof EcosystemRoute
   '/settings': typeof SettingsRoute
+  '/sign-in': typeof SignInRoute
   '/sitemap.xml': typeof SitemapDotxmlRoute
+  '/verify-product': typeof VerifyProductRoute
+  '/welcome': typeof WelcomeRoute
   '/api/public/cypher-tts': typeof ApiPublicCypherTtsRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/settings' | '/sitemap.xml' | '/api/public/cypher-tts'
+  fullPaths:
+    | '/'
+    | '/ecosystem'
+    | '/settings'
+    | '/sign-in'
+    | '/sitemap.xml'
+    | '/verify-product'
+    | '/welcome'
+    | '/api/public/cypher-tts'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/settings' | '/sitemap.xml' | '/api/public/cypher-tts'
-  id: '__root__' | '/' | '/settings' | '/sitemap.xml' | '/api/public/cypher-tts'
+  to:
+    | '/'
+    | '/ecosystem'
+    | '/settings'
+    | '/sign-in'
+    | '/sitemap.xml'
+    | '/verify-product'
+    | '/welcome'
+    | '/api/public/cypher-tts'
+  id:
+    | '__root__'
+    | '/'
+    | '/ecosystem'
+    | '/settings'
+    | '/sign-in'
+    | '/sitemap.xml'
+    | '/verify-product'
+    | '/welcome'
+    | '/api/public/cypher-tts'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  EcosystemRoute: typeof EcosystemRoute
   SettingsRoute: typeof SettingsRoute
+  SignInRoute: typeof SignInRoute
   SitemapDotxmlRoute: typeof SitemapDotxmlRoute
+  VerifyProductRoute: typeof VerifyProductRoute
+  WelcomeRoute: typeof WelcomeRoute
   ApiPublicCypherTtsRoute: typeof ApiPublicCypherTtsRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/welcome': {
+      id: '/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof WelcomeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/verify-product': {
+      id: '/verify-product'
+      path: '/verify-product'
+      fullPath: '/verify-product'
+      preLoaderRoute: typeof VerifyProductRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/sitemap.xml': {
       id: '/sitemap.xml'
       path: '/sitemap.xml'
@@ -78,11 +157,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SitemapDotxmlRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/settings': {
       id: '/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ecosystem': {
+      id: '/ecosystem'
+      path: '/ecosystem'
+      fullPath: '/ecosystem'
+      preLoaderRoute: typeof EcosystemRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/': {
@@ -104,8 +197,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  EcosystemRoute: EcosystemRoute,
   SettingsRoute: SettingsRoute,
+  SignInRoute: SignInRoute,
   SitemapDotxmlRoute: SitemapDotxmlRoute,
+  VerifyProductRoute: VerifyProductRoute,
+  WelcomeRoute: WelcomeRoute,
   ApiPublicCypherTtsRoute: ApiPublicCypherTtsRoute,
 }
 export const routeTree = rootRouteImport
