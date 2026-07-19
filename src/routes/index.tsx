@@ -510,7 +510,7 @@ function SmartWattPage() {
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     onClick={triggerPowerToggle}
-                    disabled={pending || !sessionCtx.deviceOnline}
+                    disabled={pending || !liveControlOk}
                     className={cn(
                       "relative flex h-28 w-28 flex-col items-center justify-center rounded-full border text-center transition-all duration-500",
                       !sessionCtx.deviceOnline
@@ -576,13 +576,13 @@ function SmartWattPage() {
                 icon={<Zap className="h-4 w-4" />}
                 label="Turn ON"
                 onClick={() => sessionCtx.sendDeviceCommand(true)}
-                disabled={pending || confirmedOn || !sessionCtx.deviceOnline}
+                disabled={pending || confirmedOn || !liveControlOk}
               />
               <QuickActionButton
                 icon={<Power className="h-4 w-4" />}
                 label="Turn OFF"
                 onClick={() => sessionCtx.sendDeviceCommand(false)}
-                disabled={pending || !confirmedOn || !sessionCtx.deviceOnline}
+                disabled={pending || !confirmedOn || !liveControlOk}
               />
               <QuickActionButton
                 icon={<Mic className="h-4 w-4" />}
