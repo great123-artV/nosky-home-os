@@ -46,6 +46,8 @@ export interface CypherSettings {
   startupSound: boolean;
   browserVoiceFallback: boolean;
   conversationHistoryEnabled: boolean;
+  voiceId?: string;
+  modelId?: string;
 }
 
 export interface HistoryItem {

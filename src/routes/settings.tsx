@@ -38,6 +38,22 @@ import { elevenLabsSpeechService } from "@/cypher/services/elevenLabsSpeechServi
 import { Slider } from "@/components/ui/slider";
 import { InstallPwaButton } from "@/components/install-pwa";
 
+const ELEVENLABS_VOICES = [
+  { id: "21m00Tcm4TlvDq8ikWAM", name: "Rachel (Premium Default)" },
+  { id: "EXAVITQu4vr4xnSDxMaL", name: "Sarah (Classic)" },
+  { id: "29vD33N1CtxCmqQRPOHJ", name: "Drew (Warm Male)" },
+  { id: "JBF2xF2Xtx374fpspLAr", name: "George (Deep Male)" },
+  { id: "piTKgcLEGmPEe87fPv9Y", name: "Nicole (Whispery Female)" },
+  { id: "nPczCjzI2devA68v8g96", name: "Brian (Professional Male)" },
+];
+
+const ELEVENLABS_MODELS = [
+  { id: "eleven_turbo_v2_5", name: "Turbo v2.5 (Fast)" },
+  { id: "eleven_flash_v2_5", name: "Flash v2.5 (Ultra Fast)" },
+  { id: "eleven_multilingual_v2", name: "Multilingual v2 (High Quality)" },
+  { id: "eleven_monolingual_v1", name: "English v1 (Classic)" },
+];
+
 export const Route = createFileRoute("/settings")({
   ssr: false,
   head: () => ({
@@ -184,7 +200,9 @@ function SettingsPage() {
             onClick={() => sessionCtx.setSimulationMode(false)}
             className={cn(
               "rounded-lg px-3 py-1 text-xs font-semibold uppercase tracking-wider transition-all",
-              !sessionCtx.simulationMode ? "bg-primary text-primary-foreground font-bold shadow-glow" : "text-muted-foreground hover:text-foreground"
+              !sessionCtx.simulationMode
+                ? "bg-primary text-primary-foreground font-bold shadow-glow"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             Live Mode
@@ -193,7 +211,9 @@ function SettingsPage() {
             onClick={() => sessionCtx.setSimulationMode(true)}
             className={cn(
               "rounded-lg px-3 py-1 text-xs font-semibold uppercase tracking-wider transition-all",
-              sessionCtx.simulationMode ? "bg-amber-500 text-black font-bold shadow-glow" : "text-muted-foreground hover:text-foreground"
+              sessionCtx.simulationMode
+                ? "bg-amber-500 text-black font-bold shadow-glow"
+                : "text-muted-foreground hover:text-foreground",
             )}
           >
             Simulation
@@ -225,7 +245,6 @@ function SettingsPage() {
           destructive
         />
       </Section>
-
 
       {/* DEVICE */}
       <Section title="Device information">
@@ -296,7 +315,9 @@ function SettingsPage() {
             </div>
             <select
               value={cypherSettings.wakePhrase}
-              onChange={(e) => updateCypher({ wakePhrase: e.target.value as any })}
+              onChange={(e) =>
+                updateCypher({ wakePhrase: e.target.value as "Hey Cypher" | "Cypher" })
+              }
               className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none"
             >
               <option value="Hey Cypher">Hey Cypher</option>
@@ -345,7 +366,21 @@ function SettingsPage() {
                 {elevenLabsStatus.loading
                   ? "—"
                   : elevenLabsStatus.configured && sessionCtx.networkOnline
-                    ? "Sarah (Premium Default)"
+                    ? ELEVENLABS_VOICES.find(
+                        (v) => v.id === (cypherSettings.voiceId || "21m00Tcm4TlvDq8ikWAM"),
+                      )?.name.replace(" (Premium Default)", "") || "Rachel"
+                    : "Device Default"}
+              </p>
+            </div>
+            <div>
+              <p className="text-muted-foreground font-medium">AI Model</p>
+              <p className="text-foreground font-semibold mt-0.5">
+                {elevenLabsStatus.loading
+                  ? "—"
+                  : elevenLabsStatus.configured && sessionCtx.networkOnline
+                    ? ELEVENLABS_MODELS.find(
+                        (m) => m.id === (cypherSettings.modelId || "eleven_turbo_v2_5"),
+                      )?.name || "Turbo v2.5"
                     : "Device Default"}
               </p>
             </div>
@@ -360,7 +395,11 @@ function SettingsPage() {
                   </p>
                 ) : (
                   <p className="text-emerald-400 font-semibold mt-0.5">
-                    Premium voice active
+                    Premium voice active (
+                    {ELEVENLABS_VOICES.find(
+                      (v) => v.id === (cypherSettings.voiceId || "21m00Tcm4TlvDq8ikWAM"),
+                    )?.name.replace(" (Premium Default)", "")}
+                    )
                   </p>
                 )
               ) : (
@@ -372,11 +411,11 @@ function SettingsPage() {
           </div>
         </div>
 
-        {/* Premium Voice Selector (Future-ready) */}
+        {/* Premium Voice Profile Choice */}
         <div className="flex flex-col gap-3 px-5 py-4">
           <div className="flex items-center gap-4">
             <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
-              <Sparkles className="h-5 w-5" />
+              <UserIcon className="h-5 w-5" />
             </span>
             <div className="min-w-0 flex-1">
               <p className="text-sm font-semibold text-foreground">Premium Voice Profile</p>
@@ -385,13 +424,41 @@ function SettingsPage() {
               </p>
             </div>
             <select
-              value="premium_default"
-              disabled
-              className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none opacity-80"
+              value={cypherSettings.voiceId || "21m00Tcm4TlvDq8ikWAM"}
+              onChange={(e) => updateCypher({ voiceId: e.target.value })}
+              className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none"
             >
-              <option value="premium_default">Premium (Default)</option>
-              <option value="premium_futuristic" disabled>Futuristic (Coming Soon)</option>
-              <option value="premium_warm" disabled>Warm Male (Coming Soon)</option>
+              {ELEVENLABS_VOICES.map((v) => (
+                <option key={v.id} value={v.id}>
+                  {v.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* Premium Voice AI Model Selection */}
+        <div className="flex flex-col gap-3 px-5 py-4">
+          <div className="flex items-center gap-4">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary/15 text-primary">
+              <Cpu className="h-5 w-5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-foreground">Premium Voice AI Model</p>
+              <p className="truncate text-xs text-muted-foreground">
+                Select the underlying ElevenLabs synthesis model
+              </p>
+            </div>
+            <select
+              value={cypherSettings.modelId || "eleven_turbo_v2_5"}
+              onChange={(e) => updateCypher({ modelId: e.target.value })}
+              className="h-9 rounded-lg border border-border bg-background/40 px-2 text-xs text-foreground focus:border-primary/60 focus:outline-none"
+            >
+              {ELEVENLABS_MODELS.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.name}
+                </option>
+              ))}
             </select>
           </div>
         </div>
@@ -491,7 +558,13 @@ function SettingsPage() {
         />
 
         <Row
-          icon={sessionCtx.microphonePermission === "denied" ? <MicOff className="h-5 w-5" /> : <Mic className="h-5 w-5" />}
+          icon={
+            sessionCtx.microphonePermission === "denied" ? (
+              <MicOff className="h-5 w-5" />
+            ) : (
+              <Mic className="h-5 w-5" />
+            )
+          }
           label={`Microphone permission · ${sessionCtx.microphonePermission}`}
           desc="Managed securely by your browser settings"
         />
