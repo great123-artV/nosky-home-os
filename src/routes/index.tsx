@@ -56,6 +56,18 @@ export const Route = createFileRoute("/")({
   component: SmartWattPage,
 });
 
+function RedirectToWelcome() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate({ to: "/welcome", replace: true });
+  }, [navigate]);
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  );
+}
+
 // Normalized event model for high-end Activity Timeline
 interface TimelineEvent {
   id: string;
