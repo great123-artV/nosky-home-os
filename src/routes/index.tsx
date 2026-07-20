@@ -34,7 +34,7 @@ import type { LegalDoc } from "@/lib/legal";
 import { InstallPwaButton } from "@/components/install-pwa";
 import { OfflineBanner, useLiveControlAvailable } from "@/components/offline-banner";
 import { useOnline } from "@/hooks/use-online";
-import { SignIn } from "@/components/SignIn";
+
 
 // Cypher integration
 import { useSessionContext } from "@/cypher/context/SessionContext";
