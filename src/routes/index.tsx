@@ -214,12 +214,7 @@ function SmartWattPage() {
   }
 
   if (!sessionCtx.isAuthenticated) {
-    return (
-      <>
-        <SignIn onLegal={setLegal} />
-        <LegalModal docId={legal} onClose={() => setLegal(null)} />
-      </>
-    );
+    return <RedirectToWelcome />;
   }
 
   const pending = sessionCtx.pendingCommand !== null;
