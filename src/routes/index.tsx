@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
 import {
@@ -34,7 +34,7 @@ import type { LegalDoc } from "@/lib/legal";
 import { InstallPwaButton } from "@/components/install-pwa";
 import { OfflineBanner, useLiveControlAvailable } from "@/components/offline-banner";
 import { useOnline } from "@/hooks/use-online";
-import { SignIn } from "@/components/SignIn";
+
 
 // Cypher integration
 import { useSessionContext } from "@/cypher/context/SessionContext";
@@ -55,6 +55,18 @@ export const Route = createFileRoute("/")({
   }),
   component: SmartWattPage,
 });
+
+function RedirectToWelcome() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    navigate({ to: "/welcome", replace: true });
+  }, [navigate]);
+  return (
+    <div className="flex min-h-[60vh] items-center justify-center">
+      <Loader2 className="h-6 w-6 animate-spin text-primary" />
+    </div>
+  );
+}
 
 // Normalized event model for high-end Activity Timeline
 interface TimelineEvent {
@@ -214,12 +226,7 @@ function SmartWattPage() {
   }
 
   if (!sessionCtx.isAuthenticated) {
-    return (
-      <>
-        <SignIn onLegal={setLegal} />
-        <LegalModal docId={legal} onClose={() => setLegal(null)} />
-      </>
-    );
+    return <RedirectToWelcome />;
   }
 
   const pending = sessionCtx.pendingCommand !== null;
