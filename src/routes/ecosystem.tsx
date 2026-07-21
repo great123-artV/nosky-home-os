@@ -30,7 +30,6 @@ import {
 } from "lucide-react";
 import { useSessionContext } from "@/cypher/context/SessionContext";
 import { supabase } from "@/lib/supabase";
-import { useCypher } from "@/cypher/hooks/useCypher";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/ecosystem")({
