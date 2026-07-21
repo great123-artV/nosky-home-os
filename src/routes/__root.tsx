@@ -565,6 +565,13 @@ function RootInner() {
     registerPWA();
   }, []);
 
+  // Allow other routes (e.g. /ecosystem) to open the Cypher drawer via event
+  useEffect(() => {
+    const handler = () => setIsDrawerOpen(true);
+    window.addEventListener("nosky:openCypher", handler);
+    return () => window.removeEventListener("nosky:openCypher", handler);
+  }, []);
+
   // Initialize unified global Cypher brain hook
   const cypher = useCypher();
 
