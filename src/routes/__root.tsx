@@ -618,36 +618,7 @@ function RootInner() {
         <BackgroundSystem intensity="quiet" />
 
         <div className="flex min-h-screen flex-col">
-          <header className="sticky top-0 z-40 w-full border-b border-white/[0.04] bg-[#050914]/40 backdrop-blur-2xl">
-            <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-              <div className="flex items-center gap-3">
-                <span className="grid h-9 w-9 place-items-center rounded-xl border border-primary/30 bg-primary/10 text-primary">
-                  <Zap className="h-4.5 w-4.5" strokeWidth={2.5} />
-                </span>
-                <span className="leading-tight">
-                  <span className="block font-display text-sm font-bold tracking-[0.15em] text-foreground">
-                    NOSKY SMART
-                  </span>
-                  <span className="block text-[9px] uppercase tracking-[0.25em] text-muted-foreground/80">
-                    Ecosystem OS
-                  </span>
-                </span>
-              </div>
-
-              {sessionCtx.isAuthenticated && (
-                <button
-                  onClick={() => supabase.auth.signOut()}
-                  className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] text-muted-foreground transition hover:bg-destructive/10 hover:text-destructive"
-                  aria-label="Sign out"
-                  title="Sign out"
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              )}
-            </div>
-          </header>
-
-          <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6">
+          <main className="w-full flex-1">
             <Outlet />
           </main>
         </div>
