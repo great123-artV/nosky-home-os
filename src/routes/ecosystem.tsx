@@ -251,7 +251,7 @@ function EcosystemScreen() {
 
   const openCypher = () => {
     try {
-      cypher.openDrawer();
+      window.dispatchEvent(new CustomEvent("nosky:openCypher"));
     } catch {
       /* noop */
     }
