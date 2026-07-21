@@ -84,7 +84,6 @@ function productRoute(type: string | null | undefined): "/" | null {
 function EcosystemScreen() {
   const sessionCtx = useSessionContext();
   const navigate = useNavigate();
-  const cypher = useCypher();
 
   // Route protection
   useEffect(() => {
