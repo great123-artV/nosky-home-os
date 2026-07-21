@@ -68,14 +68,18 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
       confidence: parsedIntent?.confidence ?? 0,
       selectedEngine: parsedIntent?.engine || "fallback",
       authStatus: sessionCtx.authStatus,
-      userIdSanitized: sessionCtx.user?.id ? `USR-${sessionCtx.user.id.substring(0, 8)}...` : "Unauthenticated",
+      userIdSanitized: sessionCtx.user?.id
+        ? `USR-${sessionCtx.user.id.substring(0, 8)}...`
+        : "Unauthenticated",
       deviceId: sessionCtx.deviceId || "None",
       deviceOnline: sessionCtx.deviceOnline ? "ONLINE" : "OFFLINE",
       realtimeConnected: sessionCtx.realtimeConnected ? "CONNECTED" : "DISCONNECTED",
       networkOnline: sessionCtx.networkOnline ? "ONLINE" : "OFFLINE",
       desiredState: sessionCtx.desiredState ? "ON" : "OFF",
       actualState: sessionCtx.actualState ? "ON" : "OFF",
-      pendingCommand: sessionCtx.pendingCommand ? JSON.stringify(sessionCtx.pendingCommand) : "None",
+      pendingCommand: sessionCtx.pendingCommand
+        ? JSON.stringify(sessionCtx.pendingCommand)
+        : "None",
       knowledgeMatchKey: knowledgeMatch?.item?.id || "None",
       knowledgeSource: knowledgeMatch?.item?.source || "None",
       microphoneStatus: sessionCtx.microphonePermission,
@@ -308,11 +312,15 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
                     <div className="space-y-2 text-[10px] font-mono text-emerald-300 leading-relaxed max-h-[14rem] overflow-y-auto pr-1">
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Raw Transcript:</span>
-                        <span className="text-foreground max-w-[200px] truncate text-right">"{currentText || "None"}"</span>
+                        <span className="text-foreground max-w-[200px] truncate text-right">
+                          "{currentText || "None"}"
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Detected Intent:</span>
-                        <span className="text-white font-bold">{parsedIntent?.intent || "UNKNOWN"}</span>
+                        <span className="text-white font-bold">
+                          {parsedIntent?.intent || "UNKNOWN"}
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Confidence Score:</span>
@@ -320,7 +328,9 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Engine Selected:</span>
-                        <span className="text-white capitalize">{parsedIntent?.engine || "fallback"}</span>
+                        <span className="text-white capitalize">
+                          {parsedIntent?.engine || "fallback"}
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Auth Flow State:</span>
@@ -328,7 +338,9 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>User UUID:</span>
-                        <span className="text-white truncate max-w-[180px]">{sessionCtx.user?.id || "None"}</span>
+                        <span className="text-white truncate max-w-[180px]">
+                          {sessionCtx.user?.id || "None"}
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Target Device ID:</span>
@@ -336,30 +348,41 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Device Online State:</span>
-                        <span className={sessionCtx.deviceOnline ? "text-emerald-400" : "text-red-400"}>
+                        <span
+                          className={sessionCtx.deviceOnline ? "text-emerald-400" : "text-red-400"}
+                        >
                           {sessionCtx.deviceOnline ? "ONLINE" : "OFFLINE"}
                         </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Realtime Status:</span>
-                        <span className={sessionCtx.realtimeConnected ? "text-emerald-400" : "text-amber-400"}>
+                        <span
+                          className={
+                            sessionCtx.realtimeConnected ? "text-emerald-400" : "text-amber-400"
+                          }
+                        >
                           {sessionCtx.realtimeConnected ? "CONNECTED" : "DISCONNECTED"}
                         </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Client Internet Connection:</span>
-                        <span className="text-white">{sessionCtx.networkOnline ? "ONLINE" : "OFFLINE"}</span>
+                        <span className="text-white">
+                          {sessionCtx.networkOnline ? "ONLINE" : "OFFLINE"}
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Relay (Desired vs Actual):</span>
                         <span className="text-white">
-                          Desired: {sessionCtx.desiredState ? "ON" : "OFF"} | Actual: {sessionCtx.actualState ? "ON" : "OFF"}
+                          Desired: {sessionCtx.desiredState ? "ON" : "OFF"} | Actual:{" "}
+                          {sessionCtx.actualState ? "ON" : "OFF"}
                         </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Pending Handshake Cmd:</span>
                         <span className="text-white truncate max-w-[150px]">
-                          {sessionCtx.pendingCommand ? JSON.stringify(sessionCtx.pendingCommand) : "None"}
+                          {sessionCtx.pendingCommand
+                            ? JSON.stringify(sessionCtx.pendingCommand)
+                            : "None"}
                         </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
@@ -376,11 +399,15 @@ export function CypherDrawer({ isOpen, onClose, cypher }: CypherDrawerProps) {
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Microphone Status:</span>
-                        <span className="text-white capitalize">{sessionCtx.microphonePermission}</span>
+                        <span className="text-white capitalize">
+                          {sessionCtx.microphonePermission}
+                        </span>
                       </div>
                       <div className="flex justify-between border-b border-emerald-500/5 pb-1">
                         <span>Last Captured Error:</span>
-                        <span className="text-red-400 truncate max-w-[180px]">{sessionCtx.lastError || "None"}</span>
+                        <span className="text-red-400 truncate max-w-[180px]">
+                          {sessionCtx.lastError || "None"}
+                        </span>
                       </div>
                     </div>
 

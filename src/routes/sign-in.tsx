@@ -71,10 +71,11 @@ function SignInScreen() {
         setIsClaiming(false);
         isClaimingRef.current = false;
       }
-
     } catch (err: any) {
       console.error("Error claiming product on sign in success:", err);
-      setClaimError("We couldn’t claim your verified product right now. Please navigate back to verify again.");
+      setClaimError(
+        "We couldn’t claim your verified product right now. Please navigate back to verify again.",
+      );
       setIsClaiming(false);
       isClaimingRef.current = false;
     }
@@ -103,9 +104,12 @@ function SignInScreen() {
         {isClaiming ? (
           <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4 text-center">
             <Loader2 className="h-10 w-10 animate-spin text-primary" />
-            <h2 className="font-display text-lg font-bold text-foreground">Completing product setup...</h2>
+            <h2 className="font-display text-lg font-bold text-foreground">
+              Completing product setup...
+            </h2>
             <p className="text-xs text-muted-foreground max-w-xs leading-relaxed">
-              We are securely pairing your verified device with your newly logged in session. Please don't close this page.
+              We are securely pairing your verified device with your newly logged in session. Please
+              don't close this page.
             </p>
           </div>
         ) : (
@@ -115,10 +119,7 @@ function SignInScreen() {
                 {claimError}
               </div>
             )}
-            <SignIn
-              onLegal={(docId) => setLegal(docId)}
-              onSuccess={handleSuccess}
-            />
+            <SignIn onLegal={(docId) => setLegal(docId)} onSuccess={handleSuccess} />
           </div>
         )}
       </div>

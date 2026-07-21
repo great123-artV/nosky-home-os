@@ -11,13 +11,13 @@ export function OfflineBanner() {
   // realtime channel is not connected, or the physical device is offline.
   const browserOffline = !online;
   const cloudDown = online && !ctx.realtimeConnected && ctx.isAuthenticated;
-  const deviceDown = online && ctx.isAuthenticated && ctx.deviceRecord !== null && !ctx.deviceOnline;
+  const deviceDown =
+    online && ctx.isAuthenticated && ctx.deviceRecord !== null && !ctx.deviceOnline;
 
   const visible = browserOffline || cloudDown || deviceDown;
   if (!visible) return null;
 
-  const lastState =
-    ctx.actualState === null ? "unknown" : ctx.actualState ? "ON" : "OFF";
+  const lastState = ctx.actualState === null ? "unknown" : ctx.actualState ? "ON" : "OFF";
   const lastSeen = ctx.lastUpdated
     ? new Date(ctx.lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "—";
@@ -79,5 +79,10 @@ export function OfflineBanner() {
 export function useLiveControlAvailable() {
   const online = useOnline();
   const ctx = useSessionContext();
-  return online && ctx.isAuthenticated && ctx.deviceOnline && (ctx.realtimeConnected || ctx.simulationMode);
+  return (
+    online &&
+    ctx.isAuthenticated &&
+    ctx.deviceOnline &&
+    (ctx.realtimeConnected || ctx.simulationMode)
+  );
 }

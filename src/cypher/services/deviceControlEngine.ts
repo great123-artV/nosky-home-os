@@ -63,7 +63,8 @@ export const deviceControlEngine = {
         success: false,
         state: "failed",
         error: "NetworkOffline",
-        responseMessage: "Your smartphone is currently offline. Please check your internet connection.",
+        responseMessage:
+          "Your smartphone is currently offline. Please check your internet connection.",
       };
     }
 
@@ -73,7 +74,8 @@ export const deviceControlEngine = {
         success: false,
         state: "failed",
         error: "RealtimeDisconnected",
-        responseMessage: "I'm connected to your account, but live device confirmation is unavailable right now.",
+        responseMessage:
+          "I'm connected to your account, but live device confirmation is unavailable right now.",
       };
     }
 

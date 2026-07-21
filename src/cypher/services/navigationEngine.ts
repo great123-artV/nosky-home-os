@@ -51,7 +51,9 @@ export const navigationEngine = {
         };
 
       case "OPEN_PRIVACY": {
-        const trigger = document.querySelector('[data-legal-trigger="privacy"]') as HTMLButtonElement | null;
+        const trigger = document.querySelector(
+          '[data-legal-trigger="privacy"]',
+        ) as HTMLButtonElement | null;
         if (trigger) trigger.click();
         return {
           success: true,
@@ -62,7 +64,9 @@ export const navigationEngine = {
       }
 
       case "OPEN_TERMS": {
-        const trigger = document.querySelector('[data-legal-trigger="terms"]') as HTMLButtonElement | null;
+        const trigger = document.querySelector(
+          '[data-legal-trigger="terms"]',
+        ) as HTMLButtonElement | null;
         if (trigger) trigger.click();
         return {
           success: true,
@@ -73,7 +77,9 @@ export const navigationEngine = {
       }
 
       case "SAFETY_INFO": {
-        const trigger = document.querySelector('[data-legal-trigger="safety"]') as HTMLButtonElement | null;
+        const trigger = document.querySelector(
+          '[data-legal-trigger="safety"]',
+        ) as HTMLButtonElement | null;
         if (trigger) trigger.click();
         return {
           success: true,
