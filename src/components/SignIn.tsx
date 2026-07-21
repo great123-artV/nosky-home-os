@@ -1,6 +1,17 @@
 import { useState, type FormEvent } from "react";
 import { motion, AnimatePresence } from "motion/react";
-import { Loader2, Power, Eye, EyeOff, Zap, Sparkles, Cloud, Server, ShieldAlert, UserPlus } from "lucide-react";
+import {
+  Loader2,
+  Power,
+  Eye,
+  EyeOff,
+  Zap,
+  Sparkles,
+  Cloud,
+  Server,
+  ShieldAlert,
+  UserPlus,
+} from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { InstallPwaButton } from "./install-pwa";
 
@@ -74,8 +85,12 @@ export function SignIn({ onLegal, onSuccess }: SignInProps) {
               <Zap className="h-5 w-5" strokeWidth={2.4} />
             </span>
             <div>
-              <p className="font-display text-lg font-bold tracking-[0.2em] text-foreground">SMART WATT</p>
-              <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground/80">NoskyTech OS</p>
+              <p className="font-display text-lg font-bold tracking-[0.2em] text-foreground">
+                SMART WATT
+              </p>
+              <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground/80">
+                NoskyTech OS
+              </p>
             </div>
           </div>
 
@@ -93,7 +108,10 @@ export function SignIn({ onLegal, onSuccess }: SignInProps) {
             <FeatureChip icon={<Sparkles className="h-3.5 w-3.5" />} label="Cypher Voice AI" />
             <FeatureChip icon={<Cloud className="h-3.5 w-3.5" />} label="Realtime Cloud" />
             <FeatureChip icon={<Server className="h-3.5 w-3.5" />} label="Hardware Handshake" />
-            <FeatureChip icon={<ShieldAlert className="h-3.5 w-3.5" />} label="Zero Anonymous Access" />
+            <FeatureChip
+              icon={<ShieldAlert className="h-3.5 w-3.5" />}
+              label="Zero Anonymous Access"
+            />
           </div>
         </div>
 
@@ -176,9 +194,13 @@ export function SignIn({ onLegal, onSuccess }: SignInProps) {
               className="space-y-4 rounded-xl border border-primary/20 bg-primary/5 p-4 text-center"
             >
               <Sparkles className="mx-auto h-8 w-8 text-primary animate-pulse" />
-              <h3 className="font-display text-sm font-bold text-foreground">Verification email sent!</h3>
+              <h3 className="font-display text-sm font-bold text-foreground">
+                Verification email sent!
+              </h3>
               <p className="text-xs text-muted-foreground leading-relaxed">
-                Please check your inbox at <span className="text-foreground font-semibold">{email}</span> and click the confirmation link to complete your signup.
+                Please check your inbox at{" "}
+                <span className="text-foreground font-semibold">{email}</span> and click the
+                confirmation link to complete your signup.
               </p>
               <button
                 type="button"
@@ -253,14 +275,20 @@ export function SignIn({ onLegal, onSuccess }: SignInProps) {
                 ) : (
                   <Power className="h-4 w-4" />
                 )}
-                {busy ? "Processing…" : isSignUp ? "Create NoskyTech Account" : "Sign in to SMART WATT"}
+                {busy
+                  ? "Processing…"
+                  : isSignUp
+                    ? "Create NoskyTech Account"
+                    : "Sign in to SMART WATT"}
               </button>
             </form>
           )}
 
           <div className="mt-5 flex items-center gap-3">
             <div className="h-px flex-1 bg-white/[0.06]" />
-            <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">or</span>
+            <span className="text-[10px] uppercase tracking-widest text-muted-foreground/60">
+              or
+            </span>
             <div className="h-px flex-1 bg-white/[0.06]" />
           </div>
 
@@ -270,11 +298,19 @@ export function SignIn({ onLegal, onSuccess }: SignInProps) {
 
           <p className="mt-6 text-center text-[11px] leading-relaxed text-muted-foreground">
             By signing in, you agree to the SMART WATT{" "}
-            <button type="button" onClick={() => onLegal("terms")} className="text-primary hover:underline">
+            <button
+              type="button"
+              onClick={() => onLegal("terms")}
+              className="text-primary hover:underline"
+            >
               Terms of Use
             </button>{" "}
             and{" "}
-            <button type="button" onClick={() => onLegal("privacy")} className="text-primary hover:underline">
+            <button
+              type="button"
+              onClick={() => onLegal("privacy")}
+              className="text-primary hover:underline"
+            >
               Privacy Policy
             </button>
             .

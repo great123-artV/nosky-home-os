@@ -77,9 +77,7 @@ export const audioEngine = {
 
   async speak(
     text: string,
-    onStatusChange: (
-      status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed",
-    ) => void,
+    onStatusChange: (status: "elevenlabs" | "fallback" | "playing" | "stopped" | "failed") => void,
   ): Promise<boolean> {
     // Stop anything already speaking; the newest utterance wins.
     this.stopPlayback();

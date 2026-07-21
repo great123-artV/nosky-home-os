@@ -31,6 +31,7 @@ import {
 import { useSessionContext } from "@/cypher/context/SessionContext";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/ecosystem")({
   ssr: false,
@@ -56,6 +57,14 @@ type OwnedProduct = {
   name: string | null;
   online: boolean | null;
   claimed_at: string | null;
+};
+
+type Home = {
+  id: string;
+  name: string;
+  owner_id: string;
+  created_at?: string;
+  updated_at?: string;
 };
 
 type ClaimNotice = {
@@ -99,11 +108,74 @@ function EcosystemScreen() {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement | null>(null);
 
+  // Homes and Create Home States
+  const [homes, setHomes] = useState<Home[] | null>(null);
+  const [checkingHomes, setCheckingHomes] = useState(true);
+
+  const [homeName, setHomeName] = useState("");
+  const [homeType, setHomeType] = useState<string | null>(null);
+  const [locationName, setLocationName] = useState("");
+  const [creatingHome, setCreatingHome] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const userEmail = sessionCtx.user?.email || "";
   const userMeta = sessionCtx.user?.user_metadata ?? {};
-  const displayName: string =
-    userMeta.full_name || userMeta.name || userMeta.nosky_id || "";
+  const displayName: string = userMeta.full_name || userMeta.name || userMeta.nosky_id || "";
   const noskyId: string = userMeta.nosky_id || userEmail.split("@")[0] || "";
+
+  // ---------- Load homes ----------
+  const loadHomes = useCallback(async () => {
+    if (!sessionCtx.user?.id) return;
+    setCheckingHomes(true);
+    try {
+      const { data, error } = await supabase
+        .from("homes")
+        .select("id, name, owner_id, created_at, updated_at")
+        .eq("owner_id", sessionCtx.user.id);
+
+      if (error) throw error;
+      setHomes(data || []);
+    } catch (err) {
+      console.error("[ecosystem] loadHomes error", err);
+      setHomes([]);
+    } finally {
+      setCheckingHomes(false);
+    }
+  }, [sessionCtx.user?.id]);
+
+  // ---------- Create home handler ----------
+  const handleCreateHome = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!homeName.trim() || !sessionCtx.user?.id) return;
+
+    setCreatingHome(true);
+    setCreateError(null);
+    try {
+      const { data, error } = await supabase
+        .from("homes")
+        .insert({
+          name: homeName.trim(),
+          owner_id: sessionCtx.user.id,
+        })
+        .select();
+
+      if (error) throw error;
+
+      toast.success("Welcome to your first Nosky Home.");
+
+      if (data && data.length > 0) {
+        setHomes(data);
+      } else {
+        await loadHomes();
+      }
+    } catch (err) {
+      console.error("[ecosystem] create home error", err);
+      const msg = err instanceof Error ? err.message : String(err);
+      setCreateError(msg || "Could not create Home. Please try again.");
+    } finally {
+      setCreatingHome(false);
+    }
+  };
 
   // ---------- Load owned products ----------
   const loadProducts = useCallback(async () => {
@@ -115,24 +187,33 @@ function EcosystemScreen() {
       const joined = await supabase
         .from("user_products")
         .select(
-          `id, claimed_at, products:product_id (id, product_uid, product_type, model, name, online)`
+          `id, claimed_at, products:product_id (id, product_uid, product_type, model, name, online)`,
         )
         .eq("user_id", sessionCtx.user.id)
         .order("claimed_at", { ascending: false });
 
       if (!joined.error && Array.isArray(joined.data)) {
-        const mapped: OwnedProduct[] = joined.data.flatMap((row: any) => {
-          const p = row.products;
+        const mapped: OwnedProduct[] = joined.data.flatMap((row) => {
+          const p = (row as Record<string, unknown>).products as {
+            id?: string;
+            product_uid?: string;
+            product_type?: string | null;
+            model?: string | null;
+            name?: string | null;
+            online?: boolean | null;
+          } | null;
           if (!p) return [];
-          return [{
-            id: p.id ?? row.id,
-            product_uid: p.product_uid ?? "",
-            product_type: p.product_type ?? null,
-            model: p.model ?? null,
-            name: p.name ?? null,
-            online: p.online ?? null,
-            claimed_at: row.claimed_at ?? null,
-          }];
+          return [
+            {
+              id: p.id ?? row.id,
+              product_uid: p.product_uid ?? "",
+              product_type: p.product_type ?? null,
+              model: p.model ?? null,
+              name: p.name ?? null,
+              online: p.online ?? null,
+              claimed_at: row.claimed_at ?? null,
+            },
+          ];
         });
         setProducts(mapped);
         setLoading(false);
@@ -147,7 +228,7 @@ function EcosystemScreen() {
 
       if (!direct.error && Array.isArray(direct.data)) {
         setProducts(
-          direct.data.map((p: any) => ({
+          direct.data.map((p) => ({
             id: p.id,
             product_uid: p.product_uid ?? "",
             product_type: p.product_type ?? null,
@@ -155,7 +236,7 @@ function EcosystemScreen() {
             name: p.name ?? null,
             online: p.online ?? null,
             claimed_at: p.claimed_at ?? null,
-          }))
+          })),
         );
         setLoading(false);
         return;
@@ -164,7 +245,7 @@ function EcosystemScreen() {
       // Neither shape available — treat as empty rather than error
       setProducts([]);
       setLoading(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error("[ecosystem] loadProducts error", err);
       setErrorMsg("We couldn’t load your products. Please try again.");
       setLoading(false);
@@ -172,15 +253,18 @@ function EcosystemScreen() {
   }, [sessionCtx.user?.id]);
 
   useEffect(() => {
-    if (sessionCtx.isAuthenticated) loadProducts();
-  }, [sessionCtx.isAuthenticated, loadProducts]);
+    if (sessionCtx.isAuthenticated) {
+      loadHomes();
+      loadProducts();
+    }
+  }, [sessionCtx.isAuthenticated, loadHomes, loadProducts]);
 
   // ---------- Pending onboarding claim ----------
   useEffect(() => {
     if (!sessionCtx.isAuthenticated) return;
     const raw = sessionStorage.getItem("nosky_onboarding");
     if (!raw) return;
-    let payload: any;
+    let payload: { onboardingToken?: string; productType?: string } | null = null;
     try {
       payload = JSON.parse(raw);
     } catch {
@@ -202,7 +286,7 @@ function EcosystemScreen() {
         if (result?.success) {
           setClaimNotice({
             kind: "success",
-            message: `${result.product_type || payload.productType || "Product"} added to your ecosystem.`,
+            message: `${result.product_type || payload?.productType || "Product"} added to your ecosystem.`,
           });
           sessionStorage.removeItem("nosky_onboarding");
           loadProducts();
@@ -213,7 +297,7 @@ function EcosystemScreen() {
           });
           sessionStorage.removeItem("nosky_onboarding");
         }
-      } catch (err: any) {
+      } catch (err) {
         console.error("[ecosystem] claim error", err);
         setClaimNotice({
           kind: "error",
@@ -244,7 +328,11 @@ function EcosystemScreen() {
   const handleOpenProduct = (p: OwnedProduct) => {
     const route = productRoute(p.product_type);
     if (route) navigate({ to: route });
-    else setClaimNotice({ kind: "error", message: `${p.product_type ?? "This product"} experience is coming soon.` });
+    else
+      setClaimNotice({
+        kind: "error",
+        message: `${p.product_type ?? "This product"} experience is coming soon.`,
+      });
   };
 
   const openCypher = () => {
@@ -256,7 +344,7 @@ function EcosystemScreen() {
   };
 
   // Loading state
-  if (sessionCtx.authStatus === "initializing") {
+  if (sessionCtx.authStatus === "initializing" || checkingHomes) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4">
         <span className="h-8 w-8 animate-spin border-4 border-primary border-t-transparent rounded-full" />
@@ -268,6 +356,156 @@ function EcosystemScreen() {
   }
 
   if (!sessionCtx.isAuthenticated) return null;
+
+  const hasZeroHomes = homes === null || homes.length === 0;
+
+  if (hasZeroHomes) {
+    return (
+      <div className="relative z-10 mx-auto w-full max-w-lg px-4 py-8 sm:py-16">
+        {/* Ambient glow */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 -z-0 h-[420px] bg-gradient-to-b from-primary/10 via-transparent to-transparent blur-3xl" />
+
+        {/* Ambient floating particles */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-[12%] left-[25%] h-1 w-1 rounded-full bg-primary/40 animate-particle" />
+          <div
+            className="absolute top-[48%] left-[75%] h-1.5 w-1.5 rounded-full bg-primary/30 animate-particle"
+            style={{ animationDelay: "2s", animationDuration: "14s" }}
+          />
+          <div
+            className="absolute top-[78%] left-[20%] h-1 w-1 rounded-full bg-primary/35 animate-particle"
+            style={{ animationDelay: "4s", animationDuration: "10s" }}
+          />
+          <div
+            className="absolute top-[28%] left-[82%] h-1 w-1 rounded-full bg-primary/25 animate-particle"
+            style={{ animationDelay: "1s", animationDuration: "16s" }}
+          />
+        </div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 15 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{ duration: 0.6 }}
+          className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0A1220]/90 p-6 shadow-card backdrop-blur-xl sm:p-8"
+        >
+          {/* Inner card glow */}
+          <div className="pointer-events-none absolute -inset-16 bg-gradient-to-br from-primary/10 via-transparent to-transparent blur-2xl" />
+
+          <div className="relative text-center">
+            {/* Outlined House Schematic */}
+            <div className="relative mx-auto flex h-20 w-20 items-center justify-center rounded-3xl border border-primary/25 bg-gradient-to-b from-primary/15 to-transparent text-primary shadow-[0_0_30px_rgba(59,130,246,0.15)]">
+              <div className="absolute inset-0 rounded-3xl bg-primary/5 blur-xl animate-pulse" />
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="h-10 w-10 text-primary drop-shadow-[0_0_10px_rgba(59,130,246,0.3)]"
+              >
+                <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+                <polyline points="9 22 9 12 15 12 15 22" />
+              </svg>
+            </div>
+
+            <h1 className="mt-6 font-display text-2xl font-extrabold tracking-tight text-foreground sm:text-3xl">
+              Create your first Home
+            </h1>
+            <p className="mt-2.5 text-sm text-muted-foreground leading-relaxed">
+              Every NoskyTech product belongs to a Home.
+              <br className="hidden sm:inline" /> Create one to begin building your automation
+              ecosystem.
+            </p>
+          </div>
+
+          <form onSubmit={handleCreateHome} className="relative mt-8 space-y-5">
+            {/* Home Name field */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                Home Name <span className="text-primary">*</span>
+              </label>
+              <input
+                type="text"
+                required
+                value={homeName}
+                onChange={(e) => setHomeName(e.target.value)}
+                placeholder="e.g. My Smart Home, Lakehouse, HQ Office"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-foreground placeholder-muted-foreground/50 transition-all focus:border-primary/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+
+            {/* Optional Home Type field */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                Optional Home Type
+              </label>
+              <div className="flex flex-wrap gap-2 pt-1">
+                {["House", "Apartment", "Office", "Shop", "Hostel", "Factory", "Other"].map(
+                  (type) => {
+                    const selected = homeType === type;
+                    return (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setHomeType(selected ? null : type)}
+                        className={cn(
+                          "rounded-full border px-3 py-1.5 text-xs font-semibold transition-all hover:scale-[1.02] active:scale-[0.98]",
+                          selected
+                            ? "border-primary/30 bg-primary/15 text-primary shadow-[0_0_15px_rgba(59,130,246,0.15)]"
+                            : "border-white/[0.06] bg-white/[0.01] text-muted-foreground hover:border-white/[0.12] hover:text-foreground",
+                        )}
+                      >
+                        {type}
+                      </button>
+                    );
+                  },
+                )}
+              </div>
+            </div>
+
+            {/* Optional Location field */}
+            <div className="space-y-1.5">
+              <label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground/80">
+                Optional Location
+              </label>
+              <input
+                type="text"
+                value={locationName}
+                onChange={(e) => setLocationName(e.target.value)}
+                placeholder="e.g. San Francisco, CA"
+                className="w-full rounded-xl border border-white/[0.08] bg-white/[0.02] px-4 py-3 text-sm text-foreground placeholder-muted-foreground/50 transition-all focus:border-primary/50 focus:bg-white/[0.04] focus:outline-none focus:ring-1 focus:ring-primary/50"
+              />
+            </div>
+
+            {/* Error display */}
+            {createError && (
+              <p className="rounded-xl border border-destructive/20 bg-destructive/5 px-4 py-2.5 text-center text-xs text-destructive">
+                {createError}
+              </p>
+            )}
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={creatingHome || !homeName.trim()}
+              className="flex h-11 w-full items-center justify-center gap-1.5 rounded-xl bg-primary text-xs font-bold tracking-wide text-primary-foreground transition-all hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(59,130,246,0.35)] active:scale-[0.99] disabled:scale-100 disabled:opacity-50 disabled:shadow-none"
+            >
+              {creatingHome ? (
+                <>
+                  <RefreshCw className="h-4 w-4 animate-spin" /> Creating Home...
+                </>
+              ) : (
+                <>Create Home</>
+              )}
+            </button>
+          </form>
+        </motion.div>
+      </div>
+    );
+  }
 
   const onlineCount = (products ?? []).filter((p) => p.online === true).length;
 
@@ -292,8 +530,16 @@ function EcosystemScreen() {
               <div className="text-[10px] font-bold uppercase tracking-[0.25em] text-muted-foreground">
                 NoskyTech
               </div>
-              <div className="font-display text-base font-extrabold tracking-tight text-foreground sm:text-lg">
-                NOSKY SMART
+              <div className="flex flex-wrap items-center gap-2">
+                <div className="font-display text-base font-extrabold tracking-tight text-foreground sm:text-lg">
+                  NOSKY SMART
+                </div>
+                {homes && homes.length > 0 && (
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-white/[0.08] bg-white/[0.02] px-2.5 py-0.5 text-xs font-semibold text-foreground backdrop-blur-md">
+                    <span>🏠</span>
+                    <span className="truncate max-w-[120px]">{homes[0].name}</span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -375,7 +621,7 @@ function EcosystemScreen() {
                 "flex items-start justify-between gap-3 rounded-2xl border p-3 text-sm",
                 claimNotice.kind === "success"
                   ? "border-success/25 bg-success/5 text-success"
-                  : "border-destructive/25 bg-destructive/5 text-destructive"
+                  : "border-destructive/25 bg-destructive/5 text-destructive",
               )}
             >
               <div className="flex items-start gap-2">
@@ -412,14 +658,13 @@ function EcosystemScreen() {
             label="Products"
             value={loading ? null : (products?.length ?? 0)}
           />
-          <SummaryStat icon={HomeIcon} label="Homes" value={loading ? null : 1} />
-          <SummaryStat icon={DoorOpen} label="Rooms" value={loading ? null : 0} />
           <SummaryStat
-            icon={Wifi}
-            label="Online"
-            value={loading ? null : onlineCount}
-            accent
+            icon={HomeIcon}
+            label="Homes"
+            value={checkingHomes ? null : (homes?.length ?? 0)}
           />
+          <SummaryStat icon={DoorOpen} label="Rooms" value={loading ? null : 0} />
+          <SummaryStat icon={Wifi} label="Online" value={loading ? null : onlineCount} accent />
         </div>
       </motion.section>
 
@@ -556,7 +801,7 @@ function SummaryStat({
           "grid h-8 w-8 place-items-center rounded-lg border",
           accent
             ? "border-success/25 bg-success/10 text-success"
-            : "border-primary/20 bg-primary/10 text-primary"
+            : "border-primary/20 bg-primary/10 text-primary",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -565,7 +810,11 @@ function SummaryStat({
         {label}
       </div>
       <div className="mt-1 font-display text-2xl font-extrabold text-foreground tabular-nums">
-        {value === null ? <span className="inline-block h-6 w-8 animate-pulse rounded bg-white/5" /> : value}
+        {value === null ? (
+          <span className="inline-block h-6 w-8 animate-pulse rounded bg-white/5" />
+        ) : (
+          value
+        )}
       </div>
     </div>
   );
@@ -589,7 +838,7 @@ function QuickAction({
         "group flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.99]",
         primary
           ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:shadow-[0_0_28px_rgba(59,130,246,0.25)]"
-          : "border-white/[0.08] bg-white/[0.02] text-foreground hover:border-white/[0.16] hover:bg-white/[0.04]"
+          : "border-white/[0.08] bg-white/[0.02] text-foreground hover:border-white/[0.16] hover:bg-white/[0.04]",
       )}
     >
       <div
@@ -597,7 +846,7 @@ function QuickAction({
           "grid h-9 w-9 place-items-center rounded-xl border",
           primary
             ? "border-primary/30 bg-primary/15"
-            : "border-white/[0.08] bg-white/[0.03] text-primary"
+            : "border-white/[0.08] bg-white/[0.03] text-primary",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -607,13 +856,7 @@ function QuickAction({
   );
 }
 
-function ProductCard({
-  product,
-  onOpen,
-}: {
-  product: OwnedProduct;
-  onOpen: () => void;
-}) {
+function ProductCard({ product, onOpen }: { product: OwnedProduct; onOpen: () => void }) {
   const Icon = productIcon(product.product_type);
   const online = product.online === true;
   const displayName =
@@ -663,13 +906,13 @@ function StatusBadge({ online }: { online: boolean }) {
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
         online
           ? "border-success/30 bg-success/10 text-success"
-          : "border-white/[0.08] bg-white/[0.03] text-muted-foreground"
+          : "border-white/[0.08] bg-white/[0.03] text-muted-foreground",
       )}
     >
       <span
         className={cn(
           "h-1.5 w-1.5 rounded-full",
-          online ? "bg-success shadow-[0_0_8px_currentColor]" : "bg-muted-foreground/60"
+          online ? "bg-success shadow-[0_0_8px_currentColor]" : "bg-muted-foreground/60",
         )}
       />
       {online ? "Online" : "Offline"}

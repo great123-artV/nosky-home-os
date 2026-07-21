@@ -68,7 +68,9 @@ async function fetchElevenLabsAudio(text: string): Promise<string | null> {
     return url;
   } catch (err: any) {
     if (err.name === "AbortError") {
-      console.log("[ElevenLabsSpeech] Fetch request cancelled because a newer response replaced it.");
+      console.log(
+        "[ElevenLabsSpeech] Fetch request cancelled because a newer response replaced it.",
+      );
     } else {
       console.warn("[ElevenLabsSpeech] fetch failed", err);
     }

@@ -35,7 +35,6 @@ import { InstallPwaButton } from "@/components/install-pwa";
 import { OfflineBanner, useLiveControlAvailable } from "@/components/offline-banner";
 import { useOnline } from "@/hooks/use-online";
 
-
 // Cypher integration
 import { useSessionContext } from "@/cypher/context/SessionContext";
 import { useCypher } from "@/cypher/hooks/useCypher";
@@ -135,7 +134,8 @@ function SmartWattPage() {
         type: "cypher",
         title: `Cypher: ${latest.intent}`,
         description: `"${latest.command}" -> ${latest.result}`,
-        status: latest.status === "Completed" || latest.status === "Answered" ? "Completed" : "Failed",
+        status:
+          latest.status === "Completed" || latest.status === "Answered" ? "Completed" : "Failed",
       });
     }
   }, [cypher.history]);
@@ -207,7 +207,8 @@ function SmartWattPage() {
         <AlertTriangle className="h-10 w-10 text-warning mx-auto animate-pulse mb-4" />
         <p className="font-semibold text-foreground text-lg">SMART WATT is not configured</p>
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
-          Missing Supabase credentials. Please verify your environment parameters or contact NoskyTech administrators.
+          Missing Supabase credentials. Please verify your environment parameters or contact
+          NoskyTech administrators.
         </p>
       </div>
     );
@@ -233,7 +234,9 @@ function SmartWattPage() {
   const confirmedOn = sessionCtx.actualState ?? false;
   const online = typeof navigator !== "undefined" ? navigator.onLine : true;
   const liveControlOk =
-    online && sessionCtx.deviceOnline && (sessionCtx.realtimeConnected || sessionCtx.simulationMode);
+    online &&
+    sessionCtx.deviceOnline &&
+    (sessionCtx.realtimeConnected || sessionCtx.simulationMode);
 
   return (
     <div className="w-full space-y-6 animate-fade-in">
@@ -245,8 +248,12 @@ function SmartWattPage() {
           <div className="flex items-center gap-3">
             <Sliders className="h-5 w-5 text-amber-500 animate-pulse" />
             <div>
-              <p className="text-xs font-bold text-amber-500 uppercase tracking-widest">Simulation Mode Active</p>
-              <p className="text-[11px] text-muted-foreground mt-0.5">Using simulated device parameters inside dev mode.</p>
+              <p className="text-xs font-bold text-amber-500 uppercase tracking-widest">
+                Simulation Mode Active
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-0.5">
+                Using simulated device parameters inside dev mode.
+              </p>
             </div>
           </div>
           <button
@@ -270,7 +277,9 @@ function SmartWattPage() {
             transition={{ duration: 0.5 }}
             className={cn(
               "glass-panel-elevated relative overflow-hidden border p-6 sm:p-8 shadow-card transition-all duration-700",
-              confirmedOn && sessionCtx.deviceOnline ? "glow-primary shadow-[0_0_50px_oklch(0.62_0.19_256_/_10%)] border-primary/20" : "border-white/[0.06]",
+              confirmedOn && sessionCtx.deviceOnline
+                ? "glow-primary shadow-[0_0_50px_oklch(0.62_0.19_256_/_10%)] border-primary/20"
+                : "border-white/[0.06]",
             )}
           >
             <div className="flex items-start justify-between">
@@ -334,7 +343,10 @@ function SmartWattPage() {
                           : "bg-[#050914]/40 border-white/[0.08] text-foreground hover:border-primary/50",
                     )}
                   >
-                    <Power className={cn("h-8 w-8 transition-transform", pending && "animate-pulse")} strokeWidth={2.5} />
+                    <Power
+                      className={cn("h-8 w-8 transition-transform", pending && "animate-pulse")}
+                      strokeWidth={2.5}
+                    />
                     <span className="mt-1.5 font-display text-[9px] font-bold tracking-[0.15em] uppercase">
                       {pending ? "Syncing" : confirmedOn ? "Active" : "Standby"}
                     </span>
@@ -426,50 +438,76 @@ function SmartWattPage() {
             <section className="glass-panel border border-amber-500/20 p-5 space-y-4 shadow-card">
               <div className="flex items-center gap-2">
                 <Sliders className="h-4 w-4 text-amber-500" />
-                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-amber-500">Simulation Control Panel</h3>
+                <h3 className="font-display text-xs font-bold uppercase tracking-widest text-amber-500">
+                  Simulation Control Panel
+                </h3>
               </div>
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
                 <button
-                  onClick={() => sessionCtx.setSimulationState((prev) => ({ ...prev, online: !prev.online }))}
+                  onClick={() =>
+                    sessionCtx.setSimulationState((prev) => ({ ...prev, online: !prev.online }))
+                  }
                   className={cn(
                     "rounded-xl border p-2.5 text-xs font-semibold text-center transition-all",
                     sessionCtx.simulationState.online
                       ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-400"
-                      : "border-red-500/20 bg-red-500/10 text-red-400"
+                      : "border-red-500/20 bg-red-500/10 text-red-400",
                   )}
                 >
                   {sessionCtx.simulationState.online ? "Simulate: Online" : "Simulate: Offline"}
                 </button>
 
                 <button
-                  onClick={() => sessionCtx.setSimulationState((prev) => ({ ...prev, triggerTimeout: !prev.triggerTimeout }))}
+                  onClick={() =>
+                    sessionCtx.setSimulationState((prev) => ({
+                      ...prev,
+                      triggerTimeout: !prev.triggerTimeout,
+                    }))
+                  }
                   className={cn(
                     "rounded-xl border p-2.5 text-xs font-semibold text-center transition-all",
                     sessionCtx.simulationState.triggerTimeout
                       ? "border-amber-500/20 bg-amber-500/15 text-amber-400"
-                      : "border-white/5 bg-white/[0.01] text-muted-foreground"
+                      : "border-white/5 bg-white/[0.01] text-muted-foreground",
                   )}
                 >
-                  {sessionCtx.simulationState.triggerTimeout ? "Simulate: Timeout ON" : "Simulate: Normal Timeout"}
+                  {sessionCtx.simulationState.triggerTimeout
+                    ? "Simulate: Timeout ON"
+                    : "Simulate: Normal Timeout"}
                 </button>
 
                 <button
-                  onClick={() => sessionCtx.setSimulationState((prev) => ({ ...prev, triggerNetworkError: !prev.triggerNetworkError }))}
+                  onClick={() =>
+                    sessionCtx.setSimulationState((prev) => ({
+                      ...prev,
+                      triggerNetworkError: !prev.triggerNetworkError,
+                    }))
+                  }
                   className={cn(
                     "rounded-xl border p-2.5 text-xs font-semibold text-center transition-all",
                     sessionCtx.simulationState.triggerNetworkError
                       ? "border-red-500/30 bg-red-500/15 text-red-400"
-                      : "border-white/5 bg-white/[0.01] text-muted-foreground"
+                      : "border-white/5 bg-white/[0.01] text-muted-foreground",
                   )}
                 >
-                  {sessionCtx.simulationState.triggerNetworkError ? "Simulate: Net Loss ON" : "Simulate: Normal Net"}
+                  {sessionCtx.simulationState.triggerNetworkError
+                    ? "Simulate: Net Loss ON"
+                    : "Simulate: Normal Net"}
                 </button>
               </div>
 
               <div className="flex flex-col gap-1.5 px-1 pt-1 text-[11px] text-muted-foreground leading-relaxed">
-                <p>• <strong>Simulate Online:</strong> Toggle ESP32 simulation online/offline state.</p>
-                <p>• <strong>Simulate Timeout:</strong> Send command but physical device never replies with handshake confirmation.</p>
-                <p>• <strong>Simulate Net Loss:</strong> Simulate complete loss of cloud database connectivity.</p>
+                <p>
+                  • <strong>Simulate Online:</strong> Toggle ESP32 simulation online/offline state.
+                </p>
+                <p>
+                  • <strong>Simulate Timeout:</strong> Send command but physical device never
+                  replies with handshake confirmation.
+                </p>
+                <p>
+                  • <strong>Simulate Net Loss:</strong> Simulate complete loss of cloud database
+                  connectivity.
+                </p>
               </div>
             </section>
           )}
@@ -511,7 +549,9 @@ function SmartWattPage() {
             onClick={() => cypher.handleMicrophoneClick()}
             className={cn(
               "glass-panel relative cursor-pointer overflow-hidden border p-5 shadow-card transition-all duration-300 hover:shadow-glow hover:-translate-y-1",
-              cypher.state === "listening" ? "glow-primary border-primary/30" : "border-white/[0.06]",
+              cypher.state === "listening"
+                ? "glow-primary border-primary/30"
+                : "border-white/[0.06]",
             )}
           >
             <div className="absolute inset-0 bg-gradient-to-br from-primary/[0.02] to-transparent pointer-events-none" />
@@ -526,7 +566,9 @@ function SmartWattPage() {
                 </div>
                 <div>
                   <h3 className="font-display text-sm font-bold text-foreground">Cypher Brain</h3>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80">Always-On Listening</p>
+                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground/80">
+                    Always-On Listening
+                  </p>
                 </div>
               </div>
 
@@ -555,7 +597,9 @@ function SmartWattPage() {
                   <p className="text-[10px] text-muted-foreground/80">
                     Try saying <span className="text-primary">"Hey Cypher, turn ON bulb"</span>
                   </p>
-                  <p className="text-[9px] text-muted-foreground/60 italic mt-1">Tap card to start listening</p>
+                  <p className="text-[9px] text-muted-foreground/60 italic mt-1">
+                    Tap card to start listening
+                  </p>
                 </div>
               )}
             </div>
@@ -578,7 +622,10 @@ function SmartWattPage() {
             ) : (
               <div className="relative space-y-4 before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-[1px] before:bg-white/[0.06]">
                 {events.slice(0, 5).map((ev) => (
-                  <div key={ev.id} className="relative flex gap-3.5 items-start text-xs animate-slide-up">
+                  <div
+                    key={ev.id}
+                    className="relative flex gap-3.5 items-start text-xs animate-slide-up"
+                  >
                     <div className="relative z-10 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[#050914] border border-white/[0.08]">
                       <span
                         className={cn(

@@ -10,7 +10,11 @@ interface InstallButtonProps {
   variant?: "primary" | "ghost" | "compact";
 }
 
-export function InstallPwaButton({ className, label = "Install SMART WATT", variant = "primary" }: InstallButtonProps) {
+export function InstallPwaButton({
+  className,
+  label = "Install SMART WATT",
+  variant = "primary",
+}: InstallButtonProps) {
   const { canPrompt, promptInstall, showIOSInstructions, installed } = usePwaInstall();
   const [showIOS, setShowIOS] = useState(false);
 
@@ -71,7 +75,9 @@ export function IOSInstallSheet({ open, onClose }: { open: boolean; onClose: () 
                   <p className="font-display text-sm font-bold uppercase tracking-widest text-foreground">
                     Install on iPhone
                   </p>
-                  <p className="text-[11px] text-muted-foreground">Add SMART WATT to your Home Screen</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    Add SMART WATT to your Home Screen
+                  </p>
                 </div>
               </div>
               <button
@@ -89,7 +95,8 @@ export function IOSInstallSheet({ open, onClose }: { open: boolean; onClose: () 
                   1
                 </span>
                 <span className="flex items-center gap-2">
-                  Tap the <Share className="inline h-4 w-4 text-primary" /> Share button in Safari's toolbar.
+                  Tap the <Share className="inline h-4 w-4 text-primary" /> Share button in Safari's
+                  toolbar.
                 </span>
               </li>
               <li className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
@@ -97,7 +104,8 @@ export function IOSInstallSheet({ open, onClose }: { open: boolean; onClose: () 
                   2
                 </span>
                 <span className="flex items-center gap-2">
-                  Scroll and choose <Plus className="inline h-4 w-4 text-primary" /> <b>Add to Home Screen</b>.
+                  Scroll and choose <Plus className="inline h-4 w-4 text-primary" />{" "}
+                  <b>Add to Home Screen</b>.
                 </span>
               </li>
               <li className="flex items-start gap-3 rounded-xl border border-white/[0.06] bg-white/[0.02] p-3">
@@ -111,8 +119,8 @@ export function IOSInstallSheet({ open, onClose }: { open: boolean; onClose: () 
             </ol>
 
             <p className="mt-4 rounded-lg border border-white/[0.05] bg-white/[0.02] px-3 py-2 text-[11px] leading-relaxed text-muted-foreground">
-              Note: iOS only supports installation from <b>Safari</b>. If you're inside Chrome or another
-              browser, open this page in Safari first.
+              Note: iOS only supports installation from <b>Safari</b>. If you're inside Chrome or
+              another browser, open this page in Safari first.
             </p>
           </motion.div>
         </motion.div>

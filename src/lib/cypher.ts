@@ -72,7 +72,6 @@ type SR = {
   onend: (() => void) | null;
 };
 
-
 export function getSpeechRecognitionCtor(): (new () => SR) | null {
   if (typeof window === "undefined") return null;
   const w = window as unknown as {

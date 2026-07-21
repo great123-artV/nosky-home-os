@@ -35,6 +35,7 @@ import { CypherFloatingButton } from "@/cypher/components/CypherFloatingButton";
 import { CypherDrawer } from "@/cypher/components/CypherDrawer";
 import { registerPWA } from "@/lib/pwa-register";
 import { InstallPwaButton } from "@/components/install-pwa";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -529,10 +530,7 @@ function BottomNav({ isAuthenticated }: { isAuthenticated: boolean }) {
                   active ? "bg-primary/10 border border-primary/15" : "",
                 )}
               >
-                <it.icon
-                  className="h-4 w-4"
-                  style={{ height: "1rem", width: "1rem" }}
-                />
+                <it.icon className="h-4 w-4" style={{ height: "1rem", width: "1rem" }} />
               </span>
               {it.label}
             </Link>
@@ -549,6 +547,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
         <RootInner />
+        <Toaster />
       </SessionProvider>
     </QueryClientProvider>
   );
@@ -584,7 +583,10 @@ function RootInner() {
   const backgroundIntensity = pathname === "/" ? "full" : "quiet";
 
   const formattedLastUpdated = sessionCtx.lastUpdated
-    ? new Date(sessionCtx.lastUpdated).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
+    ? new Date(sessionCtx.lastUpdated).toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
     : "";
 
   // Immersive layout for onboarding screens

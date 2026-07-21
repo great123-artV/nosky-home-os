@@ -88,13 +88,10 @@ export function useCypher() {
     async (intent: CypherIntent, rawText: string) => {
       if (isExecutingRef.current) {
         setStatusMessage("Please wait while I complete the current command.");
-        await audioEngine.speak(
-          "Please wait while I complete the current command.",
-          (v) => {
-            if (v === "playing") setActiveVoiceMode("playing");
-            else if (v === "stopped" || v === "failed") setActiveVoiceMode("none");
-          }
-        );
+        await audioEngine.speak("Please wait while I complete the current command.", (v) => {
+          if (v === "playing") setActiveVoiceMode("playing");
+          else if (v === "stopped" || v === "failed") setActiveVoiceMode("none");
+        });
         return;
       }
 
@@ -127,7 +124,7 @@ export function useCypher() {
           "Restoring your SMART WATT session...",
           "Restoring your SMART WATT session...",
           "Failed",
-          "Session Initializing"
+          "Session Initializing",
         );
         return;
       }
@@ -150,7 +147,7 @@ export function useCypher() {
           outputs.spokenText,
           outputs.uiText,
           "Failed",
-          "Access Denied (Unauthenticated)"
+          "Access Denied (Unauthenticated)",
         );
         return;
       }
@@ -182,7 +179,7 @@ export function useCypher() {
             res.responseMessage,
             res.responseMessage,
             res.success ? "Completed" : "Failed",
-            res.success ? (turnOn ? "Bulb ON" : "Bulb OFF") : (res.error || "Execution Error")
+            res.success ? (turnOn ? "Bulb ON" : "Bulb OFF") : res.error || "Execution Error",
           );
           break;
         }
@@ -195,7 +192,7 @@ export function useCypher() {
             outputs.spokenText,
             outputs.uiText,
             "Answered",
-            `Bulb state is ${sessionCtx.actualState ? "ON" : "OFF"}`
+            `Bulb state is ${sessionCtx.actualState ? "ON" : "OFF"}`,
           );
           break;
         }
@@ -208,7 +205,7 @@ export function useCypher() {
             outputs.spokenText,
             outputs.uiText,
             "Answered",
-            `Device online: ${sessionCtx.deviceOnline}`
+            `Device online: ${sessionCtx.deviceOnline}`,
           );
           break;
         }
@@ -220,7 +217,7 @@ export function useCypher() {
             "System telemetry successfully refreshed.",
             "Manual Sync completed. Device telemetry verified.",
             "Completed",
-            "Metrics Synchronized"
+            "Metrics Synchronized",
           );
           break;
         }
@@ -235,7 +232,7 @@ export function useCypher() {
             res.speechMessage,
             res.speechMessage,
             res.success ? "Completed" : "Failed",
-            intent
+            intent,
           );
           break;
         }
@@ -249,7 +246,7 @@ export function useCypher() {
             outputs.spokenText,
             outputs.uiText,
             "Failed",
-            "Unsupported Hardware Request"
+            "Unsupported Hardware Request",
           );
           break;
         }
@@ -264,7 +261,10 @@ export function useCypher() {
         case "HELP": {
           // Resolve query using structured Knowledge Engine
           const queryText = rawText || intent;
-          const { item, error } = cypherKnowledgeService.queryKnowledge(queryText, sessionCtx.isAuthenticated);
+          const { item, error } = cypherKnowledgeService.queryKnowledge(
+            queryText,
+            sessionCtx.isAuthenticated,
+          );
 
           if (error === "AuthRequired") {
             const msg = "Please sign in to access device configuration information.";
@@ -273,12 +273,7 @@ export function useCypher() {
           }
 
           if (item) {
-            await handleResponseOutput(
-              item.spokenAnswer,
-              item.fullAnswer,
-              "Answered",
-              item.title
-            );
+            await handleResponseOutput(item.spokenAnswer, item.fullAnswer, "Answered", item.title);
           } else {
             // Fallback templates from JSON rules
             const fallText = cypherKnowledgeService.getFallbackMessage();
@@ -293,14 +288,17 @@ export function useCypher() {
             outputs.spokenText,
             outputs.uiText,
             "Answered",
-            "Conversation Greeting"
+            "Conversation Greeting",
           );
           break;
         }
 
         case "UNKNOWN":
         default: {
-          const { item, error } = cypherKnowledgeService.queryKnowledge(rawText, sessionCtx.isAuthenticated);
+          const { item, error } = cypherKnowledgeService.queryKnowledge(
+            rawText,
+            sessionCtx.isAuthenticated,
+          );
 
           if (error === "AuthRequired") {
             const msg = "Please sign in to view private system answers.";
@@ -309,12 +307,7 @@ export function useCypher() {
           }
 
           if (item) {
-            await handleResponseOutput(
-              item.spokenAnswer,
-              item.fullAnswer,
-              "Answered",
-              item.title
-            );
+            await handleResponseOutput(item.spokenAnswer, item.fullAnswer, "Answered", item.title);
           } else {
             const fb = cypherKnowledgeService.getFallbackMessage();
             await handleResponseOutput(fb, fb, "Failed", "Unknown command fallback");
@@ -364,7 +357,11 @@ export function useCypher() {
   // Initiate Audio Engine recognition loop
   const initiateSpeechRecognition = useCallback(
     (isFollowUp = false) => {
-      if (settings.listeningMode === "push_to_talk" && !isFollowUp && stateRef.current === "sleeping") {
+      if (
+        settings.listeningMode === "push_to_talk" &&
+        !isFollowUp &&
+        stateRef.current === "sleeping"
+      ) {
         return; // Push to talk mode stays sleeping
       }
 
@@ -446,7 +443,7 @@ export function useCypher() {
         {
           isAlwaysOn: alwaysOnActive,
           wakePhrase: settings.wakePhrase,
-        }
+        },
       );
     },
     [settings, executeIntent, sessionCtx],
