@@ -35,6 +35,7 @@ import { CypherFloatingButton } from "@/cypher/components/CypherFloatingButton";
 import { CypherDrawer } from "@/cypher/components/CypherDrawer";
 import { registerPWA } from "@/lib/pwa-register";
 import { InstallPwaButton } from "@/components/install-pwa";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -549,6 +550,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <SessionProvider>
         <RootInner />
+        <Toaster />
       </SessionProvider>
     </QueryClientProvider>
   );

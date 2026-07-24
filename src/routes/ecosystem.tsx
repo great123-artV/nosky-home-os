@@ -36,6 +36,8 @@ import {
 import { useSessionContext } from "@/cypher/context/SessionContext";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
+import { HomeOnboarding } from "@/components/HomeOnboarding";
 
 export const Route = createFileRoute("/ecosystem")({
   ssr: false,
@@ -109,12 +111,16 @@ function EcosystemLayout() {
   const sessionCtx = useSessionContext();
   const navigate = useNavigate();
 
+  // Check if explore mode is active (?mode=explore)
+  const isExploreMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "explore";
+
   // Route protection
   useEffect(() => {
+    if (isExploreMode) return;
     if (sessionCtx.authStatus === "unauthenticated" || sessionCtx.authStatus === "expired") {
       navigate({ to: "/welcome" });
     }
-  }, [sessionCtx.authStatus, navigate]);
+  }, [sessionCtx.authStatus, navigate, isExploreMode]);
 
   const [products, setProducts] = useState<OwnedProduct[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,6 +134,64 @@ function EcosystemLayout() {
   >("none");
 
   const myProductsRef = useRef<HTMLDivElement | null>(null);
+
+  const [homes, setHomes] = useState<any[] | null>(null);
+  const [homesLoading, setHomesLoading] = useState(true);
+  const [homeCreating, setHomeCreating] = useState(false);
+
+  // ---------- Load Homes ----------
+  const loadHomes = useCallback(async () => {
+    if (isExploreMode) {
+      setHomes([{ id: "explore-home", name: "My Home (Preview)" }]);
+      setHomesLoading(false);
+      return;
+    }
+    if (!sessionCtx.user?.id) return;
+    setHomesLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from("homes")
+        .select("id, name, owner_id")
+        .eq("owner_id", sessionCtx.user.id);
+
+      if (error) throw error;
+      setHomes(data || []);
+    } catch (err) {
+      console.error("[ecosystem] loadHomes error", err);
+      setHomes([]);
+    } finally {
+      setHomesLoading(false);
+    }
+  }, [sessionCtx.user?.id, isExploreMode]);
+
+  useEffect(() => {
+    if (sessionCtx.isAuthenticated || isExploreMode) {
+      loadHomes();
+    }
+  }, [sessionCtx.isAuthenticated, isExploreMode, loadHomes]);
+
+  const handleCreateHome = async (name: string, type: string | null, location: string | null) => {
+    if (!sessionCtx.user?.id) return;
+    setHomeCreating(true);
+    try {
+      const { error } = await supabase
+        .from("homes")
+        .insert({
+          name,
+          owner_id: sessionCtx.user.id,
+        });
+
+      if (error) throw error;
+
+      toast.success("Welcome to your first Nosky Home.");
+      await loadHomes();
+    } catch (err: any) {
+      console.error("[ecosystem] createHome error", err);
+      throw new Error(err.message || "Could not create Home. Please try again.");
+    } finally {
+      setHomeCreating(false);
+    }
+  };
 
   const userEmail = sessionCtx.user?.email || "";
   const userMeta = sessionCtx.user?.user_metadata ?? {};
@@ -159,6 +223,21 @@ function EcosystemLayout() {
 
   // ---------- Load owned products ----------
   const loadProducts = useCallback(async () => {
+    if (isExploreMode) {
+      setProducts([
+        {
+          id: "mock-bulb",
+          product_uid: "NT-SW-2026-MOCK01",
+          product_type: "light_bulb",
+          model: "SW-BULB-01",
+          name: "Smart Ambient Bulb",
+          online: true,
+          claimed_at: new Date().toISOString(),
+        }
+      ]);
+      setLoading(false);
+      return;
+    }
     if (!sessionCtx.user?.id) return;
     setLoading(true);
     setErrorMsg(null);
@@ -223,12 +302,12 @@ function EcosystemLayout() {
   }, [sessionCtx.user?.id]);
 
   useEffect(() => {
-    if (sessionCtx.isAuthenticated) loadProducts();
-  }, [sessionCtx.isAuthenticated, loadProducts]);
+    if (sessionCtx.isAuthenticated || isExploreMode) loadProducts();
+  }, [sessionCtx.isAuthenticated, isExploreMode, loadProducts]);
 
   // ---------- Pending onboarding claim ----------
   useEffect(() => {
-    if (!sessionCtx.isAuthenticated) return;
+    if (!sessionCtx.isAuthenticated || isExploreMode) return;
     const raw = sessionStorage.getItem("nosky_onboarding");
     if (!raw) return;
     let payload: any;
@@ -296,7 +375,11 @@ function EcosystemLayout() {
   };
 
   // Loading state
-  if (sessionCtx.authStatus === "initializing") {
+  const mainLoading =
+    sessionCtx.authStatus === "initializing" ||
+    (homesLoading && (sessionCtx.isAuthenticated || isExploreMode));
+
+  if (mainLoading) {
     return (
       <div className="flex min-h-[60vh] flex-col items-center justify-center space-y-4">
         <span className="h-8 w-8 animate-spin border-4 border-primary border-t-transparent rounded-full" />
@@ -307,7 +390,34 @@ function EcosystemLayout() {
     );
   }
 
-  if (!sessionCtx.isAuthenticated) return null;
+  if (!sessionCtx.isAuthenticated && !isExploreMode) return null;
+
+  // Render Premium Onboarding Form if authenticated and has 0 homes
+  if (!isExploreMode && sessionCtx.isAuthenticated && homes && homes.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#050914] text-foreground flex flex-col justify-between">
+        <header className="sticky top-0 z-40 w-full border-b border-white/[0.04] bg-[#050914]/60 backdrop-blur-2xl">
+          <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
+            <NoskyLogo />
+            <button
+              onClick={handleSignOut}
+              className="flex items-center gap-2 rounded-xl border border-white/[0.08] px-3.5 py-1.5 text-xs font-semibold backdrop-blur-md hover:bg-destructive/10 hover:text-destructive transition-all animate-pulse"
+            >
+              <LogOut className="h-3.5 w-3.5" /> Sign Out
+            </button>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center">
+          <HomeOnboarding onCreateHome={handleCreateHome} loading={homeCreating} />
+        </main>
+
+        <footer className="py-4 text-center text-[10px] text-muted-foreground/20 border-t border-white/[0.02]">
+          © 2026 NoskyTech · Hardware Handshake Protocol
+        </footer>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-[#050914] text-foreground flex flex-col">
@@ -343,6 +453,8 @@ function EcosystemLayout() {
           myProductsRef={myProductsRef}
           onAddProduct={() => navigate({ to: "/verify-product" })}
           setActiveModal={setActiveModal}
+          isExploreMode={isExploreMode}
+          homes={homes}
         />
       </div>
 
@@ -813,6 +925,8 @@ interface EcosystemPageContentProps {
   myProductsRef: React.RefObject<HTMLDivElement | null>;
   onAddProduct: () => void;
   setActiveModal: (modal: any) => void;
+  isExploreMode: boolean;
+  homes: any[] | null;
 }
 
 function EcosystemPageContent({
@@ -828,6 +942,8 @@ function EcosystemPageContent({
   myProductsRef,
   onAddProduct,
   setActiveModal,
+  isExploreMode,
+  homes,
 }: EcosystemPageContentProps) {
   const onlineCount = (products ?? []).filter((p) => p.online === true).length;
 
@@ -899,14 +1015,89 @@ function EcosystemPageContent({
             label="Products"
             value={loading ? null : (products?.length ?? 0)}
           />
-          <SummaryStat icon={HomeIcon} label="Homes" value={loading ? null : 1} />
-          <SummaryStat icon={DoorOpen} label="Rooms" value={loading ? null : 0} />
+          <SummaryStat icon={HomeIcon} label="Homes" value={loading ? null : (isExploreMode ? 1 : (homes?.length ?? 0))} />
+          <SummaryStat icon={DoorOpen} label="Rooms" value={loading ? null : (isExploreMode ? 4 : 0)} />
           <SummaryStat
             icon={Wifi}
             label="Online"
             value={loading ? null : onlineCount}
             accent
           />
+        </div>
+      </motion.section>
+
+      {/* ============ MY HOMES / FEATURED PREVIEW ============ */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.12 }}
+        className="relative z-10"
+      >
+        <SectionLabel>{isExploreMode ? "Featured Preview" : "My Homes"}</SectionLabel>
+        <div className="mt-3 grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {isExploreMode ? (
+            <div className="relative overflow-hidden rounded-2xl border border-primary/25 bg-primary/5 p-5 shadow-card backdrop-blur-xl">
+              <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/10 blur-3xl opacity-50" />
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl border border-primary/30 bg-primary/15 text-primary shadow-[0_0_15px_rgba(59,130,246,0.2)]">
+                    <HomeIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-sm font-extrabold tracking-tight text-foreground">
+                      My Home (Preview)
+                    </h3>
+                    <span className="block text-[10px] font-semibold text-primary uppercase tracking-wider mt-0.5">
+                      Active Environment
+                    </span>
+                  </div>
+                </div>
+                <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-primary">
+                  Preview Only
+                </span>
+              </div>
+
+              {/* Rooms list */}
+              <div className="mt-4 border-t border-white/[0.06] pt-3.5">
+                <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-2">
+                  Configured Rooms
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  {["Living Room", "Kitchen", "Bedroom", "Office"].map((room) => (
+                    <div
+                      key={room}
+                      className="flex items-center gap-2 rounded-xl border border-white/[0.04] bg-white/[0.01] px-3 py-2 text-xs font-semibold text-foreground/85 hover:bg-white/[0.03] transition-colors"
+                    >
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary/60" />
+                      {room}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          ) : (
+            (homes ?? []).map((h) => (
+              <div
+                key={h.id}
+                className="group relative overflow-hidden rounded-2xl border border-white/[0.08] bg-white/[0.02] p-5 shadow-card transition-all hover:border-primary/25"
+              >
+                <div className="pointer-events-none absolute -right-8 -top-8 h-32 w-32 rounded-full bg-primary/10 blur-3xl opacity-0 transition-opacity group-hover:opacity-100" />
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                    <HomeIcon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-extrabold tracking-tight text-foreground">
+                      {h.name}
+                    </h3>
+                    <span className="block text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+                      Primary Location
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </motion.section>
 
