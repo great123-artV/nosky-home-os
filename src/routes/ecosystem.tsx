@@ -32,13 +32,21 @@ import {
   Settings as SettingsIcon,
   Volume2,
   VolumeX,
+  Power,
 } from "lucide-react";
 import { useSessionContext } from "@/cypher/context/SessionContext";
 import { supabase } from "@/lib/supabase";
 import { cn } from "@/lib/utils";
+import { z } from "zod";
+import { toast } from "sonner";
+
+const ecosystemSearchSchema = z.object({
+  mode: z.string().optional(),
+});
 
 export const Route = createFileRoute("/ecosystem")({
   ssr: false,
+  validateSearch: (search) => ecosystemSearchSchema.parse(search),
   head: () => ({
     meta: [
       { title: "Ecosystem — NOSKY SMART" },
@@ -108,13 +116,21 @@ export function NoskyLogo() {
 function EcosystemLayout() {
   const sessionCtx = useSessionContext();
   const navigate = useNavigate();
+  const { mode } = Route.useSearch();
+
+  const isExploreMode =
+    (sessionCtx.authStatus === "unauthenticated" || sessionCtx.authStatus === "expired") &&
+    mode === "explore";
 
   // Route protection
   useEffect(() => {
+    if (isExploreMode) {
+      return; // Allow unauthenticated explore mode
+    }
     if (sessionCtx.authStatus === "unauthenticated" || sessionCtx.authStatus === "expired") {
       navigate({ to: "/welcome" });
     }
-  }, [sessionCtx.authStatus, navigate]);
+  }, [sessionCtx.authStatus, navigate, isExploreMode]);
 
   const [products, setProducts] = useState<OwnedProduct[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,22 +140,36 @@ function EcosystemLayout() {
 
   // Active Modals state
   const [activeModal, setActiveModal] = useState<
-    "none" | "profile" | "homes" | "notifications" | "settings"
+    "none" | "profile" | "homes" | "notifications" | "settings" | "catalogue"
   >("none");
+
+  const [unlockModalOpen, setUnlockModalOpen] = useState(false);
+
+  const [homes, setHomes] = useState<Array<{ name: string; type?: string; location?: string }>>([
+    { name: "My Eco Home", type: "Apartment", location: "Primary Location" }
+  ]);
+  const [newHomeName, setNewHomeName] = useState("");
+  const [newHomeType, setNewHomeType] = useState("House");
+  const [newHomeLocation, setNewHomeLocation] = useState("");
+  const [isCreatingHome, setIsCreatingHome] = useState(false);
 
   const myProductsRef = useRef<HTMLDivElement | null>(null);
 
-  const userEmail = sessionCtx.user?.email || "";
-  const userMeta = sessionCtx.user?.user_metadata ?? {};
+  const userEmail = isExploreMode ? "guest@noskytech.com" : (sessionCtx.user?.email || "");
+  const userMeta = isExploreMode ? {} : (sessionCtx.user?.user_metadata ?? {});
 
   // Custom display name falling back to email username
   const fallbackName = userEmail ? userEmail.split("@")[0] : "Nosky Tech Member";
-  const displayName: string =
-    userMeta.full_name || userMeta.name || userMeta.nosky_id || fallbackName;
-  const noskyId: string = userMeta.nosky_id || (userEmail ? userEmail.split("@")[0] : "—");
+  const displayName: string = isExploreMode
+    ? "Guest Explorer"
+    : (userMeta.full_name || userMeta.name || userMeta.nosky_id || fallbackName);
+  const noskyId: string = isExploreMode
+    ? "EXPLORE"
+    : (userMeta.nosky_id || (userEmail ? userEmail.split("@")[0] : "—"));
 
   // Get initials for profile avatar
   const getInitials = () => {
+    if (isExploreMode) return "EX";
     const name = userMeta.full_name || userMeta.name;
     if (name) {
       const parts = name.trim().split(/\s+/);
@@ -159,6 +189,11 @@ function EcosystemLayout() {
 
   // ---------- Load owned products ----------
   const loadProducts = useCallback(async () => {
+    if (isExploreMode) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
     if (!sessionCtx.user?.id) return;
     setLoading(true);
     setErrorMsg(null);
@@ -220,11 +255,13 @@ function EcosystemLayout() {
       setErrorMsg("We couldn’t load your products. Please try again.");
       setLoading(false);
     }
-  }, [sessionCtx.user?.id]);
+  }, [sessionCtx.user?.id, isExploreMode]);
 
   useEffect(() => {
-    if (sessionCtx.isAuthenticated) loadProducts();
-  }, [sessionCtx.isAuthenticated, loadProducts]);
+    if (sessionCtx.isAuthenticated || isExploreMode) {
+      loadProducts();
+    }
+  }, [sessionCtx.isAuthenticated, loadProducts, isExploreMode]);
 
   // ---------- Pending onboarding claim ----------
   useEffect(() => {
@@ -307,7 +344,7 @@ function EcosystemLayout() {
     );
   }
 
-  if (!sessionCtx.isAuthenticated) return null;
+  if (!sessionCtx.isAuthenticated && !isExploreMode) return null;
 
   return (
     <div className="min-h-screen bg-[#050914] text-foreground flex flex-col">
@@ -326,24 +363,40 @@ function EcosystemLayout() {
         onOpenCypher={openCypher}
         activeModal={activeModal}
         setActiveModal={setActiveModal}
+        isExploreMode={isExploreMode}
+        onTriggerUnlock={() => setUnlockModalOpen(true)}
       />
 
       {/* Main Page Content */}
       <div className="flex-1 relative z-10 mx-auto w-full max-w-5xl px-4 py-6 sm:px-6 sm:py-10">
-        <EcosystemPageContent
-          products={products}
-          loading={loading}
-          errorMsg={errorMsg}
-          claimNotice={claimNotice}
-          setClaimNotice={setClaimNotice}
-          displayName={displayName}
-          loadProducts={loadProducts}
-          handleOpenProduct={handleOpenProduct}
-          openCypher={openCypher}
-          myProductsRef={myProductsRef}
-          onAddProduct={() => navigate({ to: "/verify-product" })}
-          setActiveModal={setActiveModal}
-        />
+        {isExploreMode ? (
+          <ExploreShowcase
+            onTriggerUnlock={() => setUnlockModalOpen(true)}
+            openCypher={openCypher}
+          />
+        ) : (
+          <EcosystemPageContent
+            products={products}
+            loading={loading}
+            errorMsg={errorMsg}
+            claimNotice={claimNotice}
+            setClaimNotice={setClaimNotice}
+            displayName={displayName}
+            loadProducts={loadProducts}
+            handleOpenProduct={handleOpenProduct}
+            openCypher={openCypher}
+            myProductsRef={myProductsRef}
+            onAddProduct={() => navigate({ to: "/verify-product" })}
+            setActiveModal={setActiveModal}
+            homeCount={homes.length}
+            onExploreProducts={() => setActiveModal("catalogue")}
+            onCreateHome={() => {
+              setActiveModal("homes");
+              setIsCreatingHome(true);
+            }}
+            onTalkToCypher={openCypher}
+          />
+        )}
       </div>
 
       {/* Profile Modal */}
@@ -403,26 +456,122 @@ function EcosystemLayout() {
       {/* Homes Modal */}
       <Modal
         isOpen={activeModal === "homes"}
-        onClose={() => setActiveModal("none")}
+        onClose={() => {
+          setActiveModal("none");
+          setIsCreatingHome(false);
+        }}
         title="Nosky Smart Homes"
       >
-        <div className="text-center py-4 space-y-4">
-          <div className="mx-auto grid h-14 w-14 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-[0_0_20px_rgba(59,130,246,0.2)] animate-pulse">
-            <HomeIcon className="h-6 w-6" />
-          </div>
-          <div className="space-y-2">
-            <h3 className="font-display text-lg font-extrabold text-foreground">Homes Coming Next</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
-              Our engineering team is finalizing the multi-home ecosystem controller. Soon, you will be able to orchestrate products across multiple locations dynamically.
-            </p>
-          </div>
-          <button
-            onClick={() => setActiveModal("none")}
-            className="mt-2 w-full inline-flex h-10 items-center justify-center rounded-xl bg-primary text-xs font-bold tracking-wide text-primary-foreground transition-all"
+        {isCreatingHome ? (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (!newHomeName.trim()) return;
+              setHomes((prev) => [
+                ...prev,
+                {
+                  name: newHomeName.trim(),
+                  type: newHomeType,
+                  location: newHomeLocation.trim() || undefined,
+                },
+              ]);
+              toast.success(`Home "${newHomeName}" successfully created.`);
+              setNewHomeName("");
+              setNewHomeLocation("");
+              setIsCreatingHome(false);
+            }}
+            className="space-y-4 text-left"
           >
-            Acknowledge
-          </button>
-        </div>
+            <div>
+              <label className="block mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Home Name *
+              </label>
+              <input
+                type="text"
+                required
+                value={newHomeName}
+                onChange={(e) => setNewHomeName(e.target.value)}
+                placeholder="e.g., Main House, Beach Villa"
+                className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#050914]/60 px-3.5 text-xs text-foreground placeholder:text-muted-foreground/30 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+
+            <div>
+              <label className="block mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Home Type (Optional)
+              </label>
+              <select
+                value={newHomeType}
+                onChange={(e) => setNewHomeType(e.target.value)}
+                className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#050914]/60 px-3 text-xs text-foreground focus:border-primary/60 focus:outline-none"
+              >
+                <option value="House">House</option>
+                <option value="Apartment">Apartment</option>
+                <option value="Office">Office</option>
+                <option value="Cabin">Cabin</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block mb-1.5 text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+                Location (Optional)
+              </label>
+              <input
+                type="text"
+                value={newHomeLocation}
+                onChange={(e) => setNewHomeLocation(e.target.value)}
+                placeholder="e.g., Lagos, Nairobi, Cape Town"
+                className="h-10 w-full rounded-xl border border-white/[0.08] bg-[#050914]/60 px-3.5 text-xs text-foreground placeholder:text-muted-foreground/30 focus:border-primary/60 focus:outline-none focus:ring-2 focus:ring-primary/30"
+              />
+            </div>
+
+            <div className="pt-2 flex gap-3">
+              <button
+                type="submit"
+                className="flex-1 inline-flex h-10 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground transition-all hover:scale-[1.01]"
+              >
+                Save Home
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsCreatingHome(false)}
+                className="px-4 inline-flex h-10 items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-xs font-bold"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <div className="space-y-4">
+            <div className="space-y-2.5 max-h-[40vh] overflow-y-auto">
+              {homes.map((h, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-2xl border border-white/[0.06] bg-white/[0.01] text-left">
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-9 w-9 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+                      <HomeIcon className="h-4.5 w-4.5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-bold text-foreground">{h.name}</h4>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {h.type} {h.location ? `· ${h.location}` : ""}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-bold uppercase tracking-wider text-success/80 bg-success/10 border border-success/20 px-2 py-0.5 rounded-full">
+                    Active
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            <button
+              onClick={() => setIsCreatingHome(true)}
+              className="w-full inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold text-primary-foreground transition-all"
+            >
+              <Plus className="h-4 w-4" /> Create New Home
+            </button>
+          </div>
+        )}
       </Modal>
 
       {/* Notifications Modal */}
@@ -513,6 +662,129 @@ function EcosystemLayout() {
           </div>
         </div>
       </Modal>
+
+      {/* Product Catalogue Modal */}
+      <Modal
+        isOpen={activeModal === "catalogue"}
+        onClose={() => setActiveModal("none")}
+        title="NoskyTech Product Catalogue"
+      >
+        <div className="space-y-4 max-h-[70vh] overflow-y-auto pr-1 text-left">
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Orchestrate every NoskyTech product from one premium intelligent interface.
+          </p>
+
+          <div className="space-y-4 pt-2">
+            <CatalogueItem
+              icon={Zap}
+              title="SMART WATT — Flagship Node"
+              desc="Intelligent power management controller & ESP32-connected bulb relay."
+              features={[
+                "⚡ Under 20ms switching handshake validation",
+                "📊 Live cloud state logging & telemetry streams",
+                "🧠 Local offline-first Cypher voice execution control"
+              ]}
+              badge="Available Now"
+              onAdd={() => {
+                setActiveModal("none");
+                navigate({ to: "/verify-product" });
+              }}
+            />
+
+            <CatalogueItem
+              icon={Battery}
+              title="Smart Power Bank"
+              desc="High-efficiency automated energy shifting system."
+              features={[
+                "⚡ Dynamic peak load shaving algorithms",
+                "📊 Comprehensive cell-health telemetry analysis",
+                "🔒 Integrated backup safety disconnect systems"
+              ]}
+              badge="Coming Soon"
+            />
+
+            <CatalogueItem
+              icon={ShieldCheck}
+              title="Smart Security"
+              desc="Bank-grade privacy local lock and camera surveillance suite."
+              features={[
+                "⚡ 100% local facial recognition and P2P storage",
+                "📊 Smart motion-tracking notifications",
+                "🔒 Dual-factor biometric security overrides"
+              ]}
+              badge="Coming Soon"
+            />
+
+            <CatalogueItem
+              icon={Radar}
+              title="Smart Sensors"
+              desc="Micro-radar environmental presence and temperature node."
+              features={[
+                "⚡ True presence tracking (even if static)",
+                "📊 Ambient humidity, luminance, and light logs",
+                "🔒 Contextual scene-trigger broadcast hooks"
+              ]}
+              badge="Coming Soon"
+            />
+          </div>
+        </div>
+      </Modal>
+
+      {/* Premium Unlock Modal */}
+      <UnlockModal
+        isOpen={unlockModalOpen}
+        onClose={() => setUnlockModalOpen(false)}
+      />
+    </div>
+  );
+}
+
+function CatalogueItem({
+  icon: Icon,
+  title,
+  desc,
+  features,
+  badge,
+  onAdd,
+}: {
+  icon: any;
+  title: string;
+  desc: string;
+  features: string[];
+  badge: string;
+  onAdd?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.01] p-4 space-y-3 relative overflow-hidden">
+      <div className="absolute top-2 right-2 text-[8px] font-bold uppercase tracking-widest bg-white/[0.04] border border-white/[0.06] rounded px-1.5 py-0.5 text-muted-foreground/80">
+        {badge}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <div className="grid h-9 w-9 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+          <Icon className="h-4.5 w-4.5" />
+        </div>
+        <h4 className="font-display text-sm font-extrabold text-foreground">{title}</h4>
+      </div>
+
+      <p className="text-xs text-muted-foreground/95 leading-relaxed">{desc}</p>
+
+      <ul className="space-y-1 pt-1.5 border-t border-white/[0.04]">
+        {features.map((f, i) => (
+          <li key={i} className="text-[10px] text-foreground/85 font-medium leading-relaxed">
+            {f}
+          </li>
+        ))}
+      </ul>
+
+      {onAdd && (
+        <button
+          onClick={onAdd}
+          className="mt-2 w-full inline-flex h-9 items-center justify-center rounded-xl bg-primary text-xs font-bold text-primary-foreground transition-all hover:shadow-[0_0_15px_rgba(59,130,246,0.3)]"
+        >
+          Add Product
+        </button>
+      )}
     </div>
   );
 }
@@ -529,6 +801,8 @@ interface EcosystemHeaderProps {
   onOpenCypher: () => void;
   activeModal: string;
   setActiveModal: (modal: any) => void;
+  isExploreMode: boolean;
+  onTriggerUnlock: () => void;
 }
 
 function EcosystemHeader({
@@ -542,6 +816,8 @@ function EcosystemHeader({
   onOpenCypher,
   activeModal,
   setActiveModal,
+  isExploreMode,
+  onTriggerUnlock,
 }: EcosystemHeaderProps) {
   const [profileMenuOpen, setProfileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement | null>(null);
@@ -579,6 +855,10 @@ function EcosystemHeader({
 
   const selectAction = (modal: "profile" | "homes" | "notifications" | "settings") => {
     setProfileMenuOpen(false);
+    if (isExploreMode) {
+      onTriggerUnlock();
+      return;
+    }
     setActiveModal(modal);
   };
 
@@ -595,7 +875,13 @@ function EcosystemHeader({
           {/* Add Product Button */}
           <div className="relative group">
             <button
-              onClick={() => navigate({ to: "/verify-product" })}
+              onClick={() => {
+                if (isExploreMode) {
+                  onTriggerUnlock();
+                } else {
+                  navigate({ to: "/verify-product" });
+                }
+              }}
               className="flex h-10 w-10 items-center justify-center rounded-xl border border-primary/20 bg-gradient-to-b from-primary/10 to-primary/0 text-primary shadow-[0_0_15px_rgba(59,130,246,0.15)] transition-all duration-300 hover:border-primary/40 hover:bg-primary/15 hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] active:scale-95"
               aria-label="Add NoskyTech Product"
             >
@@ -799,6 +1085,362 @@ function Modal({ isOpen, onClose, title, children }: ModalProps) {
   );
 }
 
+// ---------- Component: Explore Mode Showcase ----------
+interface ExploreShowcaseProps {
+  onTriggerUnlock: () => void;
+  openCypher: () => void;
+}
+
+function ExploreShowcase({ onTriggerUnlock, openCypher }: ExploreShowcaseProps) {
+  return (
+    <div className="space-y-8 animate-fade-in relative z-10">
+      {/* Ambient Radial Backdrops */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[500px] bg-gradient-to-b from-primary/10 via-indigo-500/5 to-transparent blur-3xl" />
+
+      {/* Greeting Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: -8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5 }}
+        className="flex items-center justify-between"
+      >
+        <div className="text-left">
+          <p className="text-xs font-bold uppercase tracking-[0.25em] text-primary">Preview Experience</p>
+          <h1 className="mt-1 font-display text-2xl font-extrabold text-foreground sm:text-3xl tracking-tight">
+            Guest Explorer Mode
+          </h1>
+        </div>
+        <div className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-primary animate-pulse">
+          <Compass className="h-3.5 w-3.5" /> Read-Only
+        </div>
+      </motion.div>
+
+      {/* Nosky Smart Overview Simulated Stats Card */}
+      <motion.section
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.6, delay: 0.1 }}
+        className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5 shadow-card backdrop-blur-xl sm:p-6"
+      >
+        <div className="pointer-events-none absolute -inset-16 bg-gradient-to-br from-primary/12 via-transparent to-transparent blur-2xl" />
+        <div className="relative grid grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-4">
+          <SummaryStat icon={Package} label="Products" value={4} />
+          <SummaryStat icon={HomeIcon} label="Homes" value={1} />
+          <SummaryStat icon={DoorOpen} label="Rooms" value={4} />
+          <SummaryStat icon={Wifi} label="Online" value={4} accent />
+        </div>
+      </motion.section>
+
+      {/* Product Categories */}
+      <section className="space-y-3">
+        <SectionLabel>Product Categories</SectionLabel>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <CategoryCard icon={Zap} title="Smart Energy" desc="Power monitoring & intelligent load shedding" />
+          <CategoryCard icon={HomeIcon} title="Smart Home" desc="Relay orchestration & scene controllers" />
+          <CategoryCard icon={Lock} title="Security" desc="Secure P2P cameras & smart lock verification" />
+          <CategoryCard icon={Bot} title="AI Automation" desc="Cypher-driven environmental awareness" />
+        </div>
+      </section>
+
+      {/* Featured Flagship Product: SMART WATT Preview Card */}
+      <section className="space-y-3">
+        <SectionLabel>Featured Flagship Product</SectionLabel>
+        <motion.div
+          whileHover={{ y: -2 }}
+          className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-gradient-to-b from-white/[0.03] to-transparent p-6 shadow-card hover:border-primary/25 transition-all duration-300 group"
+        >
+          <div className="absolute top-0 right-0 p-4 shrink-0 text-primary">
+            <span className="text-[10px] font-bold uppercase tracking-widest bg-primary/15 border border-primary/25 rounded-md px-2.5 py-1">
+              Active Showcase
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+            {/* Left Info Column */}
+            <div className="md:col-span-7 space-y-4 text-left">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl border border-primary/20 bg-primary/10 text-primary shadow-[0_0_15px_rgba(59,130,246,0.25)]">
+                <Zap className="h-6 w-6" />
+              </div>
+              <div>
+                <h3 className="font-display text-lg font-extrabold text-foreground sm:text-xl">
+                  SMART WATT — Control Center
+                </h3>
+                <p className="mt-1.5 text-xs text-muted-foreground/90 leading-relaxed max-w-lg">
+                  NoskyTech's premium connected-device controller. In physical deployments, it provides real-time switching handshakes, power diagnostics, and offline automation controls.
+                </p>
+              </div>
+
+              {/* Specifications List */}
+              <div className="space-y-2.5 pt-2">
+                <SpecRow label="Latency" value="⚡ Ultra-fast 20ms relay switching latency" />
+                <SpecRow label="Metrics" value="📊 Granular real-time power consumption metrics" />
+                <SpecRow label="Speech" value="🧠 Seamless Cypher local voice control integration" />
+              </div>
+
+              <div className="pt-2 flex flex-wrap gap-3">
+                <button
+                  onClick={onTriggerUnlock}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-xs font-bold text-primary-foreground transition-all hover:shadow-[0_0_20px_rgba(59,130,246,0.35)] active:scale-[0.99]"
+                >
+                  Open Control Center <ChevronRight className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={onTriggerUnlock}
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] px-5 text-xs font-bold hover:bg-white/[0.05]"
+                >
+                  Configure Relays
+                </button>
+              </div>
+            </div>
+
+            {/* Right Interactive Mock/Screenshot Column */}
+            <div className="md:col-span-5 relative flex items-center justify-center h-48 sm:h-56 rounded-2xl overflow-hidden bg-black/40 border border-white/[0.04]">
+              {/* Pulsing light */}
+              <div className="absolute inset-0 bg-radial-gradient from-primary/10 via-transparent to-transparent pointer-events-none" />
+
+              {/* Simulated Device toggle knob */}
+              <div className="relative text-center space-y-3">
+                <div className="relative mx-auto flex h-24 w-24 flex-col items-center justify-center rounded-full border border-primary bg-primary/10 text-primary glow-primary">
+                  <Power className="h-7 w-7" />
+                  <span className="mt-1 font-display text-[8px] font-bold tracking-widest uppercase">ACTIVE</span>
+                </div>
+                <div className="text-[10px] text-muted-foreground/80 font-mono">Simulated Node · SW-0001</div>
+              </div>
+
+              {/* Overlay blocking control */}
+              <div
+                onClick={onTriggerUnlock}
+                className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all duration-300 cursor-pointer"
+              >
+                <span className="flex items-center gap-1.5 rounded-xl bg-black/90 border border-white/[0.08] px-3.5 py-2 text-xs font-bold text-foreground shadow-lg">
+                  <Lock className="h-3.5 w-3.5 text-primary" /> Unlock Full Controls
+                </span>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+      </section>
+
+      {/* Why Nosky Smart (Core Values) */}
+      <section className="space-y-3">
+        <SectionLabel>Why Nosky Smart</SectionLabel>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <ValueCard
+            title="AI Powered"
+            desc="Cypher handles complex contextual multi-device voice actions and company diagnostics completely offline."
+          />
+          <ValueCard
+            title="Secure"
+            desc="Full bank-grade local TLS encryption, device verification tokens, and zero dependencies on foreign clouds."
+          />
+          <ValueCard
+            title="Expandable"
+            desc="Sleek plug-and-play modular physical interfaces designed to expand effortlessly as you purchase new products."
+          />
+        </div>
+      </section>
+
+      {/* Cypher Assistant Preview Option */}
+      <section className="space-y-3">
+        <SectionLabel>Cypher Assistant Introduction</SectionLabel>
+        <div
+          onClick={openCypher}
+          className="relative overflow-hidden cursor-pointer rounded-3xl border border-white/[0.08] bg-white/[0.02] p-5 shadow-card hover:border-primary/25 hover:shadow-glow transition-all duration-300"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="relative flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Bot className="h-5.5 w-5.5 animate-pulse" />
+              </div>
+              <div className="text-left">
+                <h3 className="font-display text-sm font-bold text-foreground">Meet Cypher Voice Assistant</h3>
+                <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-0.5">Preview Mode Available</p>
+              </div>
+            </div>
+            <button className="flex h-9 items-center justify-center gap-1.5 rounded-xl bg-primary/10 border border-primary/20 px-4 text-xs font-bold text-primary">
+              Ask Questions
+            </button>
+          </div>
+          <p className="mt-3.5 text-xs text-muted-foreground text-left leading-relaxed">
+            Cypher is a native operating layer for Nosky Smart. Tap here to open Cypher and ask: <span className="text-primary font-semibold">"What is Nosky Smart?"</span> or <span className="text-primary font-semibold">"Tell me about NoskyTech."</span>
+          </p>
+        </div>
+      </section>
+
+      {/* Future Ecosystem Pipeline */}
+      <section className="space-y-3">
+        <SectionLabel>Future NoskyTech Products</SectionLabel>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <FutureProductCard
+            icon={Battery}
+            title="Smart Power Bank"
+            desc="High-efficiency home power backup with AI load shifting metrics."
+          />
+          <FutureProductCard
+            icon={ShieldCheck}
+            title="Smart Security"
+            desc="Ultra secure facial-recognition lock & private storage camera suite."
+          />
+          <FutureProductCard
+            icon={Radar}
+            title="Smart Sensors"
+            desc="Advanced thermal presence and environmental diagnostic sensors."
+          />
+          <FutureProductCard
+            icon={Sliders}
+            title="Smart Appliances"
+            desc="Intelligent kitchen and cooling integration controls."
+          />
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer className="text-center pt-4 pb-8 border-t border-white/[0.04]">
+        <p className="text-[11px] font-bold text-muted-foreground/60 uppercase tracking-[0.25em]">
+          One Account. Every NoskyTech Product. Powered by Cypher.
+        </p>
+      </footer>
+    </div>
+  );
+}
+
+function CategoryCard({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.01] p-4 text-left">
+      <div className="grid h-9 w-9 place-items-center rounded-xl border border-primary/15 bg-primary/5 text-primary">
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+      <h3 className="mt-3 text-xs font-bold text-foreground">{title}</h3>
+      <p className="mt-1 text-[10px] text-muted-foreground/80 leading-relaxed">{desc}</p>
+    </div>
+  );
+}
+
+function SpecRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-center gap-2 text-xs text-left">
+      <span className="text-muted-foreground/80 font-mono text-[10px] uppercase font-bold tracking-wider">{label}:</span>
+      <span className="text-foreground font-semibold">{value}</span>
+    </div>
+  );
+}
+
+function ValueCard({ title, desc }: { title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.015] p-5 text-left">
+      <h3 className="font-display text-sm font-extrabold text-primary">{title}</h3>
+      <p className="mt-2 text-xs text-muted-foreground/90 leading-relaxed">{desc}</p>
+    </div>
+  );
+}
+
+function FutureProductCard({ icon: Icon, title, desc }: { icon: any; title: string; desc: string }) {
+  return (
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.01] p-4 text-left relative overflow-hidden group">
+      <div className="absolute top-2 right-2 rounded-md bg-white/[0.04] border border-white/[0.06] px-1.5 py-0.5 text-[8px] font-bold text-muted-foreground/70 uppercase">
+        Pipeline
+      </div>
+      <div className="grid h-9 w-9 place-items-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-muted-foreground/60">
+        <Icon className="h-4.5 w-4.5" />
+      </div>
+      <h3 className="mt-3 text-xs font-bold text-foreground">{title}</h3>
+      <p className="mt-1 text-[10px] text-muted-foreground/75 leading-relaxed">{desc}</p>
+    </div>
+  );
+}
+
+// ---------- Component: Premium Unlock Modal ----------
+interface UnlockModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+function UnlockModal({ isOpen, onClose }: UnlockModalProps) {
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [isOpen, onClose]);
+
+  return (
+    <AnimatePresence>
+      {isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Backdrop */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={onClose}
+            className="fixed inset-0 bg-black/80 backdrop-blur-md"
+          />
+
+          {/* Centered Glass Card */}
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95, y: 15 }}
+            transition={{ type: "spring", damping: 25, stiffness: 350 }}
+            className="relative w-full max-w-sm overflow-hidden rounded-3xl border border-white/[0.08] bg-[#0A1220]/90 p-6 text-center shadow-[0_0_50px_rgba(59,130,246,0.15)] backdrop-blur-2xl"
+          >
+            {/* Subtle blue light effect inside card */}
+            <div className="absolute -left-10 -top-10 h-28 w-28 rounded-full bg-primary/20 blur-2xl pointer-events-none" />
+            <div className="absolute -right-10 -bottom-10 h-28 w-28 rounded-full bg-indigo-500/10 blur-2xl pointer-events-none" />
+
+            {/* Lock Illustration */}
+            <div className="relative mx-auto mb-5 grid h-16 w-16 place-items-center rounded-2xl border border-primary/25 bg-gradient-to-b from-primary/20 to-primary/5 text-primary shadow-[0_0_20px_rgba(59,130,246,0.25)]">
+              <Lock className="h-7 w-7 filter drop-shadow-[0_0_4px_rgba(59,130,246,0.5)]" strokeWidth={2.5} />
+            </div>
+
+            {/* Content */}
+            <h2 className="font-display text-lg font-extrabold tracking-tight text-foreground">
+              Unlock the Nosky Smart Ecosystem
+            </h2>
+            <p className="mt-3 text-xs leading-relaxed text-muted-foreground/90">
+              Sign in or add a NoskyTech product to unlock automation, rooms, homes and intelligent control.
+            </p>
+
+            {/* Buttons */}
+            <div className="mt-6 flex flex-col gap-2.5">
+              <button
+                onClick={() => {
+                  onClose();
+                  navigate({ to: "/sign-in" });
+                }}
+                className="flex h-11 w-full items-center justify-center rounded-xl bg-primary text-xs font-bold tracking-wide text-primary-foreground transition-all hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] active:scale-[0.99]"
+              >
+                Sign In
+              </button>
+
+              <button
+                onClick={() => {
+                  onClose();
+                  navigate({ to: "/verify-product" });
+                }}
+                className="flex h-11 w-full items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-xs font-bold tracking-wide text-foreground transition-all hover:bg-white/[0.05] hover:border-white/[0.12] active:scale-[0.99]"
+              >
+                Add Product
+              </button>
+
+              <button
+                onClick={onClose}
+                className="mt-1 text-xs font-bold text-muted-foreground hover:text-foreground transition-colors py-1"
+              >
+                Continue Exploring
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+    </AnimatePresence>
+  );
+}
+
 // ---------- Component: Main Page Dashboard Content ----------
 interface EcosystemPageContentProps {
   products: OwnedProduct[] | null;
@@ -813,6 +1455,10 @@ interface EcosystemPageContentProps {
   myProductsRef: React.RefObject<HTMLDivElement | null>;
   onAddProduct: () => void;
   setActiveModal: (modal: any) => void;
+  homeCount?: number;
+  onExploreProducts?: () => void;
+  onCreateHome?: () => void;
+  onTalkToCypher?: () => void;
 }
 
 function EcosystemPageContent({
@@ -828,6 +1474,10 @@ function EcosystemPageContent({
   myProductsRef,
   onAddProduct,
   setActiveModal,
+  homeCount = 1,
+  onExploreProducts = () => {},
+  onCreateHome = () => {},
+  onTalkToCypher = () => {},
 }: EcosystemPageContentProps) {
   const onlineCount = (products ?? []).filter((p) => p.online === true).length;
 
@@ -899,7 +1549,7 @@ function EcosystemPageContent({
             label="Products"
             value={loading ? null : (products?.length ?? 0)}
           />
-          <SummaryStat icon={HomeIcon} label="Homes" value={loading ? null : 1} />
+          <SummaryStat icon={HomeIcon} label="Homes" value={loading ? null : homeCount} />
           <SummaryStat icon={DoorOpen} label="Rooms" value={loading ? null : 0} />
           <SummaryStat
             icon={Wifi}
@@ -978,7 +1628,12 @@ function EcosystemPageContent({
           )}
 
           {!loading && !errorMsg && products && products.length === 0 && (
-            <EmptyState onAdd={onAddProduct} />
+            <EmptyState
+              onAdd={onAddProduct}
+              onExplore={onExploreProducts}
+              onCreateHome={onCreateHome}
+              onTalkToCypher={onTalkToCypher}
+            />
           )}
 
           {!loading && !errorMsg && products && products.length > 0 && (
@@ -1164,7 +1819,17 @@ function ProductSkeletons() {
   );
 }
 
-function EmptyState({ onAdd }: { onAdd: () => void }) {
+function EmptyState({
+  onAdd,
+  onExplore,
+  onCreateHome,
+  onTalkToCypher,
+}: {
+  onAdd: () => void;
+  onExplore: () => void;
+  onCreateHome: () => void;
+  onTalkToCypher: () => void;
+}) {
   return (
     <div className="relative overflow-hidden rounded-3xl border border-white/[0.08] bg-white/[0.02] p-8 text-center sm:p-12">
       <div className="pointer-events-none absolute -inset-16 bg-gradient-to-br from-primary/10 via-transparent to-transparent blur-2xl" />
@@ -1175,15 +1840,38 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
         You haven’t added a NoskyTech product yet.
       </h3>
       <p className="relative mx-auto mt-2 max-w-sm text-sm text-muted-foreground">
-        Verify your first NoskyTech device to bring it into your Nosky Smart ecosystem.
+        Verify your first NoskyTech device to bring it into your Nosky Smart ecosystem, or explore the features below.
       </p>
-      <button
-        onClick={onAdd}
-        className="relative mt-6 inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary px-6 text-xs font-bold tracking-wide text-primary-foreground transition-all hover:scale-[1.02] hover:shadow-[0_0_28px_rgba(59,130,246,0.35)] active:scale-[0.99]"
-      >
-        <Plus className="h-4 w-4" /> Add Product
-        <ArrowRight className="h-4 w-4" />
-      </button>
+
+      <div className="relative mt-8 grid grid-cols-2 gap-3 max-w-md mx-auto">
+        <button
+          onClick={onAdd}
+          className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold tracking-wide text-primary-foreground transition-all hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(59,130,246,0.35)] active:scale-[0.99] col-span-2"
+        >
+          <Plus className="h-4 w-4" /> Add Product
+        </button>
+
+        <button
+          onClick={onExplore}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] text-xs font-bold text-foreground transition-all hover:bg-white/[0.04]"
+        >
+          <Compass className="h-4 w-4 text-primary" /> Explore Products
+        </button>
+
+        <button
+          onClick={onCreateHome}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] text-xs font-bold text-foreground transition-all hover:bg-white/[0.04]"
+        >
+          <HomeIcon className="h-4 w-4 text-primary" /> Create Home
+        </button>
+
+        <button
+          onClick={onTalkToCypher}
+          className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-white/[0.08] bg-white/[0.02] text-xs font-bold text-foreground transition-all hover:bg-white/[0.04] col-span-2"
+        >
+          <Bot className="h-4 w-4 text-primary animate-pulse" /> Talk to Cypher
+        </button>
+      </div>
     </div>
   );
 }

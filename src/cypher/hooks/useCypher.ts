@@ -142,13 +142,10 @@ export function useCypher() {
       ];
 
       if (authRequiredIntents.includes(intent) && !sessionCtx.isAuthenticated) {
-        const msg = cypherKnowledgeService.getPreLoginControlAttemptMessage();
-        const outputs = responseEngine.generateResponse(intent, "failure", {
-          errorMsg: msg,
-        });
+        const msg = "Connect your NoskyTech account and products to control your smart ecosystem.";
         await handleResponseOutput(
-          outputs.spokenText,
-          outputs.uiText,
+          msg,
+          msg,
           "Failed",
           "Access Denied (Unauthenticated)"
         );

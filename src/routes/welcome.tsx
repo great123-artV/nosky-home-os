@@ -75,13 +75,14 @@ function WelcomeScreen() {
         initial={{ opacity: 0, y: 15 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8, delay: 0.3, ease: "easeOut" }}
-        className="flex flex-col items-center max-w-sm mx-auto w-full space-y-4"
+        className="flex flex-col items-center max-w-sm mx-auto w-full space-y-3"
       >
         <Link
-          to="/verify-product"
+          to="/ecosystem"
+          search={{ mode: "explore" }}
           className="flex h-12 w-full items-center justify-center rounded-xl bg-primary text-sm font-bold tracking-wide text-primary-foreground transition-all hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] active:scale-[0.99]"
         >
-          Get Started
+          Explore Nosky Smart
         </Link>
 
         <Link
@@ -89,6 +90,13 @@ function WelcomeScreen() {
           className="flex h-12 w-full items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-sm font-bold tracking-wide text-foreground transition-all hover:bg-white/[0.05] hover:border-white/[0.12] active:scale-[0.99]"
         >
           Sign In
+        </Link>
+
+        <Link
+          to="/verify-product"
+          className="flex h-12 w-full items-center justify-center rounded-xl border border-white/[0.08] bg-white/[0.02] text-sm font-bold tracking-wide text-foreground transition-all hover:bg-white/[0.05] hover:border-white/[0.12] active:scale-[0.99]"
+        >
+          Add a Product
         </Link>
 
         <p className="text-[10px] uppercase tracking-[0.25em] text-muted-foreground/60 text-center pt-2">
