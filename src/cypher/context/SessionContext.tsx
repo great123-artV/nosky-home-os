@@ -14,6 +14,9 @@ export interface SimulationState {
   triggerElevenLabsFailure: boolean;
 }
 
+import { deviceTransportManager } from "@/services/deviceTransport/deviceTransportManager";
+import { DeviceStatus } from "@/services/deviceTransport/deviceTransport";
+
 export interface SessionContextType {
   authStatus: AuthStatus;
   session: any;
@@ -43,11 +46,23 @@ export interface SessionContextType {
   lastError: string | null;
   setLastError: (err: string | null) => void;
 
+  // Future Fields & Metrics from Unified Transport
+  voltage: number | null;
+  currentAmp: number | null;
+  powerWatts: number | null;
+  energyKwh: number | null;
+  connectionMode: string;
+  wifiRssi: number | null;
+  localIp: string | null;
+  firmwareVersion: string | null;
+
   // Simulation controls
   simulationMode: boolean;
   setSimulationMode: (mode: boolean) => void;
   simulationState: SimulationState;
-  setSimulationState: (state: Partial<SimulationState> | ((prev: SimulationState) => SimulationState)) => void;
+  setSimulationState: (
+    state: Partial<SimulationState> | ((prev: SimulationState) => SimulationState),
+  ) => void;
 
   // Refresh trigger
   refreshDevice: () => Promise<void>;
@@ -85,13 +100,19 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [realtimeConnected, setRealtimeConnected] = useState<boolean>(false);
   const [deviceId, setDeviceId] = useState<string | null>(null);
   const [deviceRecord, setDeviceRecord] = useState<SmartWattDevice | null>(null);
-  const [microphonePermission, setMicrophonePermission] = useState<"granted" | "denied" | "prompt" | "unknown">("unknown");
+  const [microphonePermission, setMicrophonePermission] = useState<
+    "granted" | "denied" | "prompt" | "unknown"
+  >("unknown");
   const [speechRecognitionAvailable, setSpeechRecognitionAvailable] = useState<boolean>(false);
   const [speechRecognitionActive, setSpeechRecognitionActive] = useState<boolean>(false);
   const [elevenLabsAvailable, setElevenLabsAvailable] = useState<boolean>(true);
   const [pwaInstalled, setPwaInstalled] = useState<boolean>(false);
-  const [pendingCommand, setPendingCommand] = useState<{ desired: boolean; timestamp: number } | null>(null);
+  const [pendingCommand, setPendingCommand] = useState<{
+    desired: boolean;
+    timestamp: number;
+  } | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const [transportStatus, setTransportStatus] = useState<DeviceStatus | null>(null);
 
   // Simulation Mode state
   const [simulationMode, setSimulationModeState] = useState<boolean>(() => {
@@ -100,7 +121,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     return false;
   });
-  const [simulationState, setSimulationStateInternal] = useState<SimulationState>(defaultSimulationState);
+  const [simulationState, setSimulationStateInternal] =
+    useState<SimulationState>(defaultSimulationState);
 
   const setSimulationMode = (mode: boolean) => {
     setSimulationModeState(mode);
@@ -109,9 +131,12 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   };
 
-  const setSimulationState = (stateUpdate: Partial<SimulationState> | ((prev: SimulationState) => SimulationState)) => {
+  const setSimulationState = (
+    stateUpdate: Partial<SimulationState> | ((prev: SimulationState) => SimulationState),
+  ) => {
     setSimulationStateInternal((prev) => {
-      const next = typeof stateUpdate === "function" ? stateUpdate(prev) : { ...prev, ...stateUpdate };
+      const next =
+        typeof stateUpdate === "function" ? stateUpdate(prev) : { ...prev, ...stateUpdate };
       return next;
     });
   };
@@ -128,12 +153,41 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     simulationStateRef.current = simulationState;
   }, [simulationState]);
 
-  // Derived properties from database or simulation state
-  const deviceOnline = simulationMode ? simulationState.online : (deviceRecord?.online ?? false);
-  const desiredState = simulationMode ? simulationState.desiredState : (deviceRecord ? deviceRecord.desired_state : null);
-  const actualState = simulationMode ? simulationState.actualState : (deviceRecord ? deviceRecord.actual_state : null);
-  const lastSeen = deviceRecord?.updated_at || null;
-  const lastUpdated = deviceRecord?.updated_at || null;
+  // Derived properties from database, transportStatus, or simulation state
+  const deviceOnline = simulationMode
+    ? simulationState.online
+    : transportStatus
+      ? transportStatus.connectionMode !== "offline"
+      : (deviceRecord?.online ?? false);
+
+  const desiredState = simulationMode
+    ? simulationState.desiredState
+    : deviceRecord
+      ? deviceRecord.desired_state
+      : null;
+
+  const actualState = simulationMode
+    ? simulationState.actualState
+    : transportStatus
+      ? transportStatus.relayState
+      : deviceRecord
+        ? deviceRecord.actual_state
+        : null;
+
+  const lastSeen = simulationMode ? new Date().toISOString() : deviceRecord?.updated_at || null;
+  const lastUpdated = simulationMode ? new Date().toISOString() : deviceRecord?.updated_at || null;
+
+  // Extended energy & transport stats
+  const voltage = simulationMode ? null : (transportStatus?.voltage ?? null);
+  const currentAmp = simulationMode ? null : (transportStatus?.currentAmp ?? null);
+  const powerWatts = simulationMode ? null : (transportStatus?.powerWatts ?? null);
+  const energyKwh = simulationMode ? null : (transportStatus?.energyKwh ?? null);
+  const connectionMode = simulationMode ? "cloud" : (transportStatus?.connectionMode ?? "offline");
+  const wifiRssi = simulationMode ? null : (transportStatus?.wifiRssi ?? null);
+  const localIp = simulationMode
+    ? null
+    : (transportStatus?.localIp ?? (deviceRecord as any)?.local_ip ?? null);
+  const firmwareVersion = simulationMode ? null : (transportStatus?.firmwareVersion ?? null);
 
   // 1. Fetch current paired device or SW-0001 fallback
   const fetchDevice = useCallback(async (userId: string | null) => {
@@ -181,101 +235,110 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     const currentUserId = user?.id || null;
     await fetchDevice(currentUserId);
-  }, [fetchDevice, user]);
+    if (deviceId) {
+      try {
+        const status = await deviceTransportManager.getStatus();
+        setTransportStatus(status);
+      } catch (err) {
+        console.error("[SessionContext] Refresh Device transport status error:", err);
+      }
+    }
+  }, [fetchDevice, user, deviceId]);
 
   // Command delivery engine (determines simulation or physical mode)
-  const sendDeviceCommand = useCallback(async (nextState: boolean): Promise<{ success: boolean; error?: string }> => {
-    if (simulationModeRef.current) {
-      if (simulationStateRef.current.triggerNetworkError) {
-        setLastError("Network simulation error");
-        return { success: false, error: "Simulated network failure." };
-      }
-
-      setSimulationState({ desiredState: nextState });
-      setPendingCommand({ desired: nextState, timestamp: Date.now() });
-
-      // Simulate network delay and actual physical device toggling
-      setTimeout(() => {
-        if (simulationStateRef.current.triggerTimeout) {
-          // Timeout triggers, physical state never confirms
-          setPendingCommand(null);
-          setLastError("Command confirmation timeout (simulated)");
-        } else {
-          setSimulationState({ actualState: nextState });
-          setPendingCommand(null);
+  const sendDeviceCommand = useCallback(
+    async (nextState: boolean): Promise<{ success: boolean; error?: string }> => {
+      if (simulationModeRef.current) {
+        if (simulationStateRef.current.triggerNetworkError) {
+          setLastError("Network simulation error");
+          return { success: false, error: "Simulated network failure." };
         }
-      }, simulationStateRef.current.delayMs);
 
-      return { success: true };
-    }
+        setSimulationState({ desiredState: nextState });
+        setPendingCommand({ desired: nextState, timestamp: Date.now() });
 
-    // Physical mode
-    if (!supabaseConfigured || !deviceId) {
-      return { success: false, error: "Supabase not configured or no active device matched." };
-    }
+        // Simulate network delay and actual physical device toggling
+        setTimeout(() => {
+          if (simulationStateRef.current.triggerTimeout) {
+            // Timeout triggers, physical state never confirms
+            setPendingCommand(null);
+            setLastError("Command confirmation timeout (simulated)");
+          } else {
+            setSimulationState({ actualState: nextState });
+            setPendingCommand(null);
+          }
+        }, simulationStateRef.current.delayMs);
 
-    try {
-      const { error } = await supabase
-        .from("smart_watt_devices")
-        .update({ desired_state: nextState })
-        .eq("device_code", deviceId);
-
-      if (error) {
-        throw error;
+        return { success: true };
       }
 
-      setPendingCommand({ desired: nextState, timestamp: Date.now() });
-      return { success: true };
-    } catch (e: any) {
-      setLastError(e.message || "Failed to deliver hardware command");
-      return { success: false, error: e.message || "Failed to deliver hardware command" };
-    }
-  }, [deviceId]);
+      // Physical mode
+      if (!supabaseConfigured || !deviceId) {
+        return { success: false, error: "Supabase not configured or no active device matched." };
+      }
 
-  // Realtime subscription setup
+      try {
+        const res = await deviceTransportManager.setRelayState(nextState);
+        if (!res.success) {
+          throw new Error(res.error || "Command failed");
+        }
+
+        setPendingCommand({ desired: nextState, timestamp: Date.now() });
+        return { success: true };
+      } catch (e: any) {
+        setLastError(e.message || "Failed to deliver hardware command");
+        return { success: false, error: e.message || "Failed to deliver hardware command" };
+      }
+    },
+    [deviceId],
+  );
+
+  // Connect deviceTransportManager when device ID changes or deviceRecord changes
   useEffect(() => {
-    if (simulationMode || !isAuthenticated || !supabaseConfigured || !deviceId) {
+    if (simulationMode || !isAuthenticated || !deviceId) {
       setRealtimeConnected(false);
+      setTransportStatus(null);
       return;
     }
 
     let isSubscribed = true;
-    const channel = supabase
-      .channel(`session_context_realtime_${deviceId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "smart_watt_devices",
-          filter: `device_code=eq.${deviceId}`,
-        },
-        (payload) => {
-          if (!isSubscribed) return;
-          const updatedDevice = payload.new as SmartWattDevice | undefined;
-          if (updatedDevice) {
-            setDeviceRecord(updatedDevice);
-            // Clear pending command if the physical device actual_state matches
-            setPendingCommand((current) => {
-              if (current && updatedDevice.actual_state === current.desired) {
-                return null;
-              }
-              return current;
-            });
+    setRealtimeConnected(true);
+
+    const localIpStr = (deviceRecord as any)?.local_ip || null;
+
+    deviceTransportManager
+      .connect({
+        deviceId,
+        localIp: localIpStr,
+      })
+      .then(() => {
+        if (!isSubscribed) return;
+        deviceTransportManager.getStatus().then((status) => {
+          if (isSubscribed) {
+            setTransportStatus(status);
           }
-        },
-      )
-      .subscribe((status) => {
-        if (isSubscribed) {
-          setRealtimeConnected(status === "SUBSCRIBED");
-        }
+        });
       });
+
+    const unsubscribe = deviceTransportManager.subscribe((status) => {
+      if (!isSubscribed) return;
+      setTransportStatus(status);
+
+      // Clear pending command if the physical device actual_state matches
+      setPendingCommand((current) => {
+        if (current && status.relayState === current.desired) {
+          return null;
+        }
+        return current;
+      });
+    });
 
     return () => {
       isSubscribed = false;
-      supabase.removeChannel(channel);
+      unsubscribe();
+      deviceTransportManager.disconnect();
     };
-  }, [simulationMode, isAuthenticated, deviceId]);
+  }, [simulationMode, isAuthenticated, deviceId, (deviceRecord as any)?.local_ip]);
 
   // Monitor pending commands to handle physical timeout fallback
   useEffect(() => {
@@ -373,7 +436,8 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (typeof window === "undefined") return;
 
     // Check capability
-    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+    const SpeechRecognition =
+      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     setSpeechRecognitionAvailable(!!SpeechRecognition);
 
     if (!("permissions" in navigator)) return;
@@ -438,6 +502,16 @@ export const SessionProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setPendingCommand,
     lastError,
     setLastError,
+
+    // Transport Fields
+    voltage,
+    currentAmp,
+    powerWatts,
+    energyKwh,
+    connectionMode,
+    wifiRssi,
+    localIp,
+    firmwareVersion,
 
     // Simulation Mode
     simulationMode,

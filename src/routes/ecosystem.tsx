@@ -92,7 +92,10 @@ export function NoskyLogo() {
   return (
     <div className="flex items-center gap-2.5 select-none">
       <div className="relative flex h-9 w-9 items-center justify-center rounded-full border border-primary/25 bg-gradient-to-b from-primary/20 to-primary/5 text-primary shadow-[0_0_15px_rgba(59,130,246,0.25)]">
-        <Zap className="h-4.5 w-4.5 filter drop-shadow-[0_0_4px_rgba(59,130,246,0.6)]" strokeWidth={2.5} />
+        <Zap
+          className="h-4.5 w-4.5 filter drop-shadow-[0_0_4px_rgba(59,130,246,0.6)]"
+          strokeWidth={2.5}
+        />
       </div>
       <div className="min-w-0">
         <div className="text-[9px] font-bold uppercase tracking-[0.22em] text-muted-foreground/80">
@@ -112,7 +115,9 @@ function EcosystemLayout() {
   const navigate = useNavigate();
 
   // Check if explore mode is active (?mode=explore)
-  const isExploreMode = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("mode") === "explore";
+  const isExploreMode =
+    typeof window !== "undefined" &&
+    new URLSearchParams(window.location.search).get("mode") === "explore";
 
   // Route protection
   useEffect(() => {
@@ -174,12 +179,10 @@ function EcosystemLayout() {
     if (!sessionCtx.user?.id) return;
     setHomeCreating(true);
     try {
-      const { error } = await supabase
-        .from("homes")
-        .insert({
-          name,
-          owner_id: sessionCtx.user.id,
-        });
+      const { error } = await supabase.from("homes").insert({
+        name,
+        owner_id: sessionCtx.user.id,
+      });
 
       if (error) throw error;
 
@@ -233,7 +236,7 @@ function EcosystemLayout() {
           name: "Smart Ambient Bulb",
           online: true,
           claimed_at: new Date().toISOString(),
-        }
+        },
       ]);
       setLoading(false);
       return;
@@ -246,7 +249,7 @@ function EcosystemLayout() {
       const joined = await supabase
         .from("user_products")
         .select(
-          `id, claimed_at, products:product_id (id, product_uid, product_type, model, name, online)`
+          `id, claimed_at, products:product_id (id, product_uid, product_type, model, name, online)`,
         )
         .eq("user_id", sessionCtx.user.id)
         .order("claimed_at", { ascending: false });
@@ -255,15 +258,17 @@ function EcosystemLayout() {
         const mapped: OwnedProduct[] = joined.data.flatMap((row: any) => {
           const p = row.products;
           if (!p) return [];
-          return [{
-            id: p.id ?? row.id,
-            product_uid: p.product_uid ?? "",
-            product_type: p.product_type ?? null,
-            model: p.model ?? null,
-            name: p.name ?? null,
-            online: p.online ?? null,
-            claimed_at: row.claimed_at ?? null,
-          }];
+          return [
+            {
+              id: p.id ?? row.id,
+              product_uid: p.product_uid ?? "",
+              product_type: p.product_type ?? null,
+              model: p.model ?? null,
+              name: p.name ?? null,
+              online: p.online ?? null,
+              claimed_at: row.claimed_at ?? null,
+            },
+          ];
         });
         setProducts(mapped);
         setLoading(false);
@@ -286,7 +291,7 @@ function EcosystemLayout() {
             name: p.name ?? null,
             online: p.online ?? null,
             claimed_at: p.claimed_at ?? null,
-          }))
+          })),
         );
         setLoading(false);
         return;
@@ -317,15 +322,30 @@ function EcosystemLayout() {
       sessionStorage.removeItem("nosky_onboarding");
       return;
     }
-    if (!payload?.onboardingToken) {
+
+    const token = payload.token || payload.onboardingToken;
+    if (!token) {
       sessionStorage.removeItem("nosky_onboarding");
       return;
+    }
+
+    // Verify expiry if exists
+    if (payload.expiresAt) {
+      const expiry = new Date(payload.expiresAt).getTime();
+      if (Date.now() > expiry) {
+        sessionStorage.removeItem("nosky_onboarding");
+        setClaimNotice({
+          kind: "error",
+          message: "Onboarding session expired. Please verify your product again.",
+        });
+        return;
+      }
     }
 
     (async () => {
       try {
         const { data, error } = await supabase.rpc("claim_verified_product", {
-          onboarding_token: payload.onboardingToken,
+          onboarding_token: token,
         });
         if (error) throw error;
         const result = Array.isArray(data) ? data[0] : data;
@@ -352,7 +372,7 @@ function EcosystemLayout() {
         sessionStorage.removeItem("nosky_onboarding");
       }
     })();
-  }, [sessionCtx.isAuthenticated, loadProducts]);
+  }, [sessionCtx.isAuthenticated, loadProducts, isExploreMode]);
 
   const handleSignOut = async () => {
     sessionStorage.removeItem("nosky_onboarding");
@@ -363,7 +383,11 @@ function EcosystemLayout() {
   const handleOpenProduct = (p: OwnedProduct) => {
     const route = productRoute(p.product_type);
     if (route) navigate({ to: route });
-    else setClaimNotice({ kind: "error", message: `${p.product_type ?? "This product"} experience is coming soon.` });
+    else
+      setClaimNotice({
+        kind: "error",
+        message: `${p.product_type ?? "This product"} experience is coming soon.`,
+      });
   };
 
   const openCypher = () => {
@@ -468,34 +492,55 @@ function EcosystemLayout() {
           <div className="flex items-center gap-4 border-b border-white/[0.06] pb-4">
             <div className="relative flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-primary/20 bg-primary/10 font-display text-lg font-bold text-primary">
               {avatarUrl ? (
-                <img src={avatarUrl} alt={displayName} className="h-full w-full rounded-full object-cover" />
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="h-full w-full rounded-full object-cover"
+                />
               ) : (
                 userInitials || <User className="h-6 w-6" />
               )}
             </div>
             <div className="min-w-0">
-              <h3 className="font-display text-lg font-extrabold text-foreground truncate">{displayName}</h3>
+              <h3 className="font-display text-lg font-extrabold text-foreground truncate">
+                {displayName}
+              </h3>
               <p className="text-xs text-muted-foreground mt-0.5">NoskyTech Member</p>
             </div>
           </div>
           <div className="space-y-3 pt-2">
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Full Name</span>
-              <span className="block mt-1 text-sm font-semibold text-foreground">{displayName}</span>
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Full Name
+              </span>
+              <span className="block mt-1 text-sm font-semibold text-foreground">
+                {displayName}
+              </span>
             </div>
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Email Address</span>
-              <span className="block mt-1 text-sm font-semibold text-foreground truncate">{userEmail}</span>
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Email Address
+              </span>
+              <span className="block mt-1 text-sm font-semibold text-foreground truncate">
+                {userEmail}
+              </span>
             </div>
             <div className="rounded-xl bg-white/[0.02] border border-white/[0.06] p-3">
-              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Nosky ID</span>
-              <span className="block mt-1 text-sm font-semibold text-primary font-mono">{noskyId}</span>
+              <span className="block text-[10px] font-bold uppercase tracking-widest text-muted-foreground">
+                Nosky ID
+              </span>
+              <span className="block mt-1 text-sm font-semibold text-primary font-mono">
+                {noskyId}
+              </span>
             </div>
           </div>
           <div className="pt-4 flex gap-3">
             <button
               onClick={() => {
-                setClaimNotice({ kind: "error", message: "Profile editing is temporarily unavailable." });
+                setClaimNotice({
+                  kind: "error",
+                  message: "Profile editing is temporarily unavailable.",
+                });
                 setActiveModal("none");
               }}
               className="flex-1 inline-flex h-10 items-center justify-center rounded-xl bg-primary text-xs font-bold tracking-wide text-primary-foreground transition-all hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(59,130,246,0.3)]"
@@ -523,9 +568,12 @@ function EcosystemLayout() {
             <HomeIcon className="h-6 w-6" />
           </div>
           <div className="space-y-2">
-            <h3 className="font-display text-lg font-extrabold text-foreground">Homes Coming Next</h3>
+            <h3 className="font-display text-lg font-extrabold text-foreground">
+              Homes Coming Next
+            </h3>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
-              Our engineering team is finalizing the multi-home ecosystem controller. Soon, you will be able to orchestrate products across multiple locations dynamically.
+              Our engineering team is finalizing the multi-home ecosystem controller. Soon, you will
+              be able to orchestrate products across multiple locations dynamically.
             </p>
           </div>
           <button
@@ -576,8 +624,12 @@ function EcosystemLayout() {
           <div className="divide-y divide-white/[0.06] border-y border-white/[0.06] py-1">
             <div className="flex items-center justify-between py-3">
               <div>
-                <span className="block text-sm font-semibold text-foreground">Real-time Telemetry</span>
-                <span className="block text-[11px] text-muted-foreground mt-0.5">Stream live device updates</span>
+                <span className="block text-sm font-semibold text-foreground">
+                  Real-time Telemetry
+                </span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">
+                  Stream live device updates
+                </span>
               </div>
               <div className="h-6 w-11 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-end p-0.5">
                 <div className="h-4 w-4 rounded-full bg-primary" />
@@ -586,8 +638,12 @@ function EcosystemLayout() {
 
             <div className="flex items-center justify-between py-3">
               <div>
-                <span className="block text-sm font-semibold text-foreground">Secure Handshake</span>
-                <span className="block text-[11px] text-muted-foreground mt-0.5">Verify firmware automatically</span>
+                <span className="block text-sm font-semibold text-foreground">
+                  Secure Handshake
+                </span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">
+                  Verify firmware automatically
+                </span>
               </div>
               <div className="h-6 w-11 rounded-full bg-primary/20 border border-primary/30 flex items-center justify-end p-0.5">
                 <div className="h-4 w-4 rounded-full bg-primary" />
@@ -596,8 +652,12 @@ function EcosystemLayout() {
 
             <div className="flex items-center justify-between py-3">
               <div>
-                <span className="block text-sm font-semibold text-foreground">Diagnostic Log Cache</span>
-                <span className="block text-[11px] text-muted-foreground mt-0.5">Retain 24h of system signals</span>
+                <span className="block text-sm font-semibold text-foreground">
+                  Diagnostic Log Cache
+                </span>
+                <span className="block text-[11px] text-muted-foreground mt-0.5">
+                  Retain 24h of system signals
+                </span>
               </div>
               <div className="h-6 w-11 rounded-full bg-white/[0.08] border border-white/[0.12] flex items-center justify-start p-0.5">
                 <div className="h-4 w-4 rounded-full bg-muted-foreground/50" />
@@ -608,9 +668,12 @@ function EcosystemLayout() {
           <div className="rounded-xl border border-warning/10 bg-warning/5 p-3 flex gap-2">
             <ShieldAlert className="h-4 w-4 text-warning shrink-0 mt-0.5" />
             <div className="min-w-0">
-              <span className="block text-xs font-bold text-warning">More settings coming soon</span>
+              <span className="block text-xs font-bold text-warning">
+                More settings coming soon
+              </span>
               <span className="block text-[10px] text-warning/80 mt-0.5 leading-relaxed">
-                Hardware preference controls, guest access delegation, and security logging are under development.
+                Hardware preference controls, guest access delegation, and security logging are
+                under development.
               </span>
             </div>
           </div>
@@ -726,14 +789,19 @@ function EcosystemHeader({
               onClick={() => setProfileMenuOpen((v) => !v)}
               className={cn(
                 "relative flex h-10 w-10 items-center justify-center rounded-full border border-white/[0.08] bg-white/[0.02] font-display text-sm font-semibold text-foreground transition-all duration-300 outline-none hover:border-primary/40 hover:bg-primary/5 hover:text-primary focus:ring-2 focus:ring-primary/40",
-                profileMenuOpen && "border-primary/50 bg-primary/10 text-primary ring-2 ring-primary/40"
+                profileMenuOpen &&
+                  "border-primary/50 bg-primary/10 text-primary ring-2 ring-primary/40",
               )}
               aria-label="Profile Menu"
               aria-expanded={profileMenuOpen}
             >
               <div className="absolute inset-0 rounded-full border border-primary/0 hover:shadow-[0_0_12px_rgba(59,130,246,0.25)] transition-shadow duration-300" />
               {avatarUrl ? (
-                <img src={avatarUrl} alt={displayName} className="h-full w-full rounded-full object-cover" />
+                <img
+                  src={avatarUrl}
+                  alt={displayName}
+                  className="h-full w-full rounded-full object-cover"
+                />
               ) : (
                 userInitials || <User className="h-4.5 w-4.5" />
               )}
@@ -892,7 +960,9 @@ function Modal({ isOpen, onClose, title, children }: ModalProps) {
           >
             {/* Header */}
             <div className="flex items-center justify-between pb-3 border-b border-white/[0.06] mb-4">
-              <h2 className="font-display text-base font-extrabold text-foreground tracking-tight">{title}</h2>
+              <h2 className="font-display text-base font-extrabold text-foreground tracking-tight">
+                {title}
+              </h2>
               <button
                 onClick={onClose}
                 className="rounded-full p-1 text-muted-foreground hover:text-foreground hover:bg-white/[0.05] transition-all"
@@ -978,7 +1048,7 @@ function EcosystemPageContent({
                 "flex items-start justify-between gap-3 rounded-2xl border p-3 text-sm",
                 claimNotice.kind === "success"
                   ? "border-success/25 bg-success/5 text-success"
-                  : "border-destructive/25 bg-destructive/5 text-destructive"
+                  : "border-destructive/25 bg-destructive/5 text-destructive",
               )}
             >
               <div className="flex items-start gap-2">
@@ -1015,14 +1085,17 @@ function EcosystemPageContent({
             label="Products"
             value={loading ? null : (products?.length ?? 0)}
           />
-          <SummaryStat icon={HomeIcon} label="Homes" value={loading ? null : (isExploreMode ? 1 : (homes?.length ?? 0))} />
-          <SummaryStat icon={DoorOpen} label="Rooms" value={loading ? null : (isExploreMode ? 4 : 0)} />
           <SummaryStat
-            icon={Wifi}
-            label="Online"
-            value={loading ? null : onlineCount}
-            accent
+            icon={HomeIcon}
+            label="Homes"
+            value={loading ? null : isExploreMode ? 1 : (homes?.length ?? 0)}
           />
+          <SummaryStat
+            icon={DoorOpen}
+            label="Rooms"
+            value={loading ? null : isExploreMode ? 4 : 0}
+          />
+          <SummaryStat icon={Wifi} label="Online" value={loading ? null : onlineCount} accent />
         </div>
       </motion.section>
 
@@ -1110,12 +1183,7 @@ function EcosystemPageContent({
       >
         <SectionLabel>Quick Actions</SectionLabel>
         <div className="mt-3 grid grid-cols-2 gap-2.5 sm:grid-cols-4">
-          <QuickAction
-            icon={Plus}
-            label="Add Product"
-            onClick={onAddProduct}
-            primary
-          />
+          <QuickAction icon={Plus} label="Add Product" onClick={onAddProduct} primary />
           <QuickAction
             icon={HomeIcon}
             label="Create Home"
@@ -1213,7 +1281,7 @@ function SummaryStat({
           "grid h-8 w-8 place-items-center rounded-lg border",
           accent
             ? "border-success/25 bg-success/10 text-success"
-            : "border-primary/20 bg-primary/10 text-primary"
+            : "border-primary/20 bg-primary/10 text-primary",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -1222,7 +1290,11 @@ function SummaryStat({
         {label}
       </div>
       <div className="mt-1 font-display text-2xl font-extrabold text-foreground tabular-nums">
-        {value === null ? <span className="inline-block h-6 w-8 animate-pulse rounded bg-white/5" /> : value}
+        {value === null ? (
+          <span className="inline-block h-6 w-8 animate-pulse rounded bg-white/5" />
+        ) : (
+          value
+        )}
       </div>
     </div>
   );
@@ -1246,7 +1318,7 @@ function QuickAction({
         "group flex flex-col items-start gap-3 rounded-2xl border p-4 text-left transition-all hover:scale-[1.02] active:scale-[0.99]",
         primary
           ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15 hover:shadow-[0_0_28px_rgba(59,130,246,0.25)]"
-          : "border-white/[0.08] bg-white/[0.02] text-foreground hover:border-white/[0.16] hover:bg-white/[0.04]"
+          : "border-white/[0.08] bg-white/[0.02] text-foreground hover:border-white/[0.16] hover:bg-white/[0.04]",
       )}
     >
       <div
@@ -1254,7 +1326,7 @@ function QuickAction({
           "grid h-9 w-9 place-items-center rounded-xl border",
           primary
             ? "border-primary/30 bg-primary/15"
-            : "border-white/[0.08] bg-white/[0.03] text-primary"
+            : "border-white/[0.08] bg-white/[0.03] text-primary",
         )}
       >
         <Icon className="h-4 w-4" />
@@ -1264,13 +1336,7 @@ function QuickAction({
   );
 }
 
-function ProductCard({
-  product,
-  onOpen,
-}: {
-  product: OwnedProduct;
-  onOpen: () => void;
-}) {
+function ProductCard({ product, onOpen }: { product: OwnedProduct; onOpen: () => void }) {
   const Icon = productIcon(product.product_type);
   const online = product.online === true;
   const displayName =
@@ -1320,13 +1386,13 @@ function StatusBadge({ online }: { online: boolean }) {
         "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider",
         online
           ? "border-success/30 bg-success/10 text-success"
-          : "border-white/[0.08] bg-white/[0.03] text-muted-foreground"
+          : "border-white/[0.08] bg-white/[0.03] text-muted-foreground",
       )}
     >
       <span
         className={cn(
           "h-1.5 w-1.5 rounded-full",
-          online ? "bg-success shadow-[0_0_8px_currentColor]" : "bg-muted-foreground/60"
+          online ? "bg-success shadow-[0_0_8px_currentColor]" : "bg-muted-foreground/60",
         )}
       />
       {online ? "Online" : "Offline"}

@@ -1,8 +1,6 @@
 import { getSpeechRecognitionCtor } from "@/lib/cypher";
 import { isCypherSpeaking } from "./audioEngine";
 
-
-
 export interface SpeechRecognitionEvents {
   onResult: (transcript: string, isFinal: boolean) => void;
   onStateChange: (state: "idle" | "listening" | "processing" | "error" | "paused_access") => void;
@@ -141,7 +139,6 @@ export class SpeechRecognitionService {
       this.start();
     }, backoff);
   }
-
 
   public start() {
     if (this.recognition && !this.isListening) {

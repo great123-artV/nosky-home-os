@@ -22,7 +22,11 @@ export function parseCypherIntent(raw: string): IntentMatchResult {
   const any = (...words: string[]) => words.some((w) => t.includes(w));
 
   // Helper helper to return match result
-  const match = (intent: CypherIntent, confidence: number = 1.0, pattern?: string): IntentMatchResult => ({
+  const match = (
+    intent: CypherIntent,
+    confidence: number = 1.0,
+    pattern?: string,
+  ): IntentMatchResult => ({
     intent,
     confidence,
     matchedPattern: pattern || t,
@@ -30,7 +34,9 @@ export function parseCypherIntent(raw: string): IntentMatchResult {
   });
 
   // 1. CANCEL & STOP (highest priority)
-  if (any("stop", "shut up", "quiet", "be quiet", "hush", "stop listening", "stop talking", "hold on")) {
+  if (
+    any("stop", "shut up", "quiet", "be quiet", "hush", "stop listening", "stop talking", "hold on")
+  ) {
     return match("STOP", 1.0, "stop phrase");
   }
 
@@ -40,7 +46,16 @@ export function parseCypherIntent(raw: string): IntentMatchResult {
 
   // 2. Hardware Control Commands (deterministic & ultra-reliable mapping)
   if (
-    any("turn off", "switch off", "power off", "put off", "shut down", "shut off", "disable light", "disable bulb") ||
+    any(
+      "turn off",
+      "switch off",
+      "power off",
+      "put off",
+      "shut down",
+      "shut off",
+      "disable light",
+      "disable bulb",
+    ) ||
     (any("off") && any("bulb", "light", "it", "smart watt", "relay", "device"))
   ) {
     return match("TURN_OFF", 1.0, "off command");
@@ -77,7 +92,10 @@ export function parseCypherIntent(raw: string): IntentMatchResult {
   }
 
   // 3. Status Queries & Manual Sync
-  if (any("refresh", "sync", "reload status", "update status") && any("device", "bulb", "light", "it", "smart watt")) {
+  if (
+    any("refresh", "sync", "reload status", "update status") &&
+    any("device", "bulb", "light", "it", "smart watt")
+  ) {
     return match("REFRESH_DEVICE", 1.0, "refresh device phrase");
   }
 
@@ -120,7 +138,9 @@ export function parseCypherIntent(raw: string): IntentMatchResult {
     return match("GUIDE_INSTALLATION", 0.9, "installation instructions");
   }
 
-  if (any("pwa", "progressive web app", "install app", "add to home", "mobile app", "download app")) {
+  if (
+    any("pwa", "progressive web app", "install app", "add to home", "mobile app", "download app")
+  ) {
     return match("GUIDE_PWA", 0.9, "pwa instructions");
   }
 
@@ -129,15 +149,35 @@ export function parseCypherIntent(raw: string): IntentMatchResult {
   }
 
   // 6. Knowledge Queries
-  if (has("what", "noskytech") || has("who", "noskytech") || has("tell", "noskytech") || has("about", "noskytech") || has("built", "you") || has("made", "you") || has("created", "you")) {
+  if (
+    has("what", "noskytech") ||
+    has("who", "noskytech") ||
+    has("tell", "noskytech") ||
+    has("about", "noskytech") ||
+    has("built", "you") ||
+    has("made", "you") ||
+    has("created", "you")
+  ) {
     return match("EXPLAIN_NOSKYTECH", 0.95, "about company");
   }
 
-  if (has("what", "smart watt") || has("what", "smartwatt") || has("tell", "smart watt") || has("about", "smart watt") || has("how", "smart watt")) {
+  if (
+    has("what", "smart watt") ||
+    has("what", "smartwatt") ||
+    has("tell", "smart watt") ||
+    has("about", "smart watt") ||
+    has("how", "smart watt")
+  ) {
     return match("EXPLAIN_SMARTWATT", 0.95, "about product smart watt");
   }
 
-  if (has("what", "cypher") || has("who", "are", "you") || has("tell", "cypher") || has("about", "cypher") || has("your", "name")) {
+  if (
+    has("what", "cypher") ||
+    has("who", "are", "you") ||
+    has("tell", "cypher") ||
+    has("about", "cypher") ||
+    has("your", "name")
+  ) {
     return match("EXPLAIN_CYPHER", 0.95, "about voice assistant cypher");
   }
 

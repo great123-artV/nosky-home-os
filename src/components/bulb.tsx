@@ -30,7 +30,8 @@ export function BulbVisual({
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="absolute top-[10%] h-48 w-48 rounded-full blur-[44px] pointer-events-none"
         style={{
-          background: "radial-gradient(circle, oklch(0.82 0.14 85 / 0.45) 0%, oklch(0.62 0.19 256 / 0.05) 50%, transparent 75%)",
+          background:
+            "radial-gradient(circle, oklch(0.82 0.14 85 / 0.45) 0%, oklch(0.62 0.19 256 / 0.05) 50%, transparent 75%)",
         }}
       />
 
@@ -85,11 +86,7 @@ export function BulbVisual({
           }}
           className={cn(
             "absolute h-10 w-36 rounded-full border border-double transition-colors duration-700 [transform:rotateX(75deg)]",
-            isOffline
-              ? "border-white/5"
-              : on
-                ? "border-amber-400/40"
-                : "border-primary/30",
+            isOffline ? "border-white/5" : on ? "border-amber-400/40" : "border-primary/30",
           )}
         />
 
@@ -130,9 +127,21 @@ export function BulbVisual({
         <defs>
           {/* Main 3D glass bulb glow */}
           <radialGradient id="bulbGlow" cx="50%" cy="42%" r="55%">
-            <stop offset="0%" stopColor="oklch(0.96 0.14 85)" stopOpacity={on && online ? 1 : 0.05} />
-            <stop offset="30%" stopColor="oklch(0.88 0.16 80)" stopOpacity={on && online ? 0.85 : 0.02} />
-            <stop offset="70%" stopColor="oklch(0.62 0.19 256)" stopOpacity={on && online ? 0.35 : 0.01} />
+            <stop
+              offset="0%"
+              stopColor="oklch(0.96 0.14 85)"
+              stopOpacity={on && online ? 1 : 0.05}
+            />
+            <stop
+              offset="30%"
+              stopColor="oklch(0.88 0.16 80)"
+              stopOpacity={on && online ? 0.85 : 0.02}
+            />
+            <stop
+              offset="70%"
+              stopColor="oklch(0.62 0.19 256)"
+              stopOpacity={on && online ? 0.35 : 0.01}
+            />
             <stop offset="100%" stopColor="oklch(0.12 0.025 256)" stopOpacity={0} />
           </radialGradient>
 
@@ -146,7 +155,11 @@ export function BulbVisual({
           {/* Luminous Core / Filament glow */}
           <radialGradient id="filamentGlow" cx="50%" cy="48%" r="40%">
             <stop offset="0%" stopColor="white" stopOpacity={on && online ? 1 : 0.1} />
-            <stop offset="60%" stopColor="oklch(0.85 0.16 85)" stopOpacity={on && online ? 0.9 : 0.05} />
+            <stop
+              offset="60%"
+              stopColor="oklch(0.85 0.16 85)"
+              stopOpacity={on && online ? 0.9 : 0.05}
+            />
             <stop offset="100%" stopColor="oklch(0.82 0.14 85)" stopOpacity={0} />
           </radialGradient>
 
@@ -196,11 +209,7 @@ export function BulbVisual({
         {/* Filament Glowing Core */}
         <g className="transition-transform duration-500">
           {/* Filament Base Support Wires */}
-          <path
-            d="M58 115 L62 82 M82 115 L78 82"
-            stroke="oklch(0.45 0.02 256)"
-            strokeWidth="1.2"
-          />
+          <path d="M58 115 L62 82 M82 115 L78 82" stroke="oklch(0.45 0.02 256)" strokeWidth="1.2" />
 
           {/* Active core emitter aura */}
           <circle
@@ -225,11 +234,20 @@ export function BulbVisual({
         {/* Metallic Base Shading - detailed realistic E27 screw base */}
         <g>
           {/* Thread 1 */}
-          <path d="M51 123 h38 c2 0, 4 2, 4 4 v4 c0 2, -2 4, -4 4 h-38 c-2 0, -4 -2, -4 -4 v-4 c0 -2, 2 -4, 4 -4z" fill="url(#metallicBase)" />
+          <path
+            d="M51 123 h38 c2 0, 4 2, 4 4 v4 c0 2, -2 4, -4 4 h-38 c-2 0, -4 -2, -4 -4 v-4 c0 -2, 2 -4, 4 -4z"
+            fill="url(#metallicBase)"
+          />
           {/* Thread 2 */}
-          <path d="M53 133 h34 c2 0, 4 2, 4 4 v4 c0 2, -2 4, -4 4 h-34 c-2 0, -4 -2, -4 -4 v-4 c0 -2, 2 -4, 4 -4z" fill="url(#metallicBase)" />
+          <path
+            d="M53 133 h34 c2 0, 4 2, 4 4 v4 c0 2, -2 4, -4 4 h-34 c-2 0, -4 -2, -4 -4 v-4 c0 -2, 2 -4, 4 -4z"
+            fill="url(#metallicBase)"
+          />
           {/* Thread 3 */}
-          <path d="M55 143 h30 c2 0, 4 2, 4 4 v4 c0 2, -2 4, -4 4 h-30 c-2 0, -4 -2, -4 -4 v-4 c0 -2, 2 -4, 4 -4z" fill="url(#metallicBase)" />
+          <path
+            d="M55 143 h30 c2 0, 4 2, 4 4 v4 c0 2, -2 4, -4 4 h-30 c-2 0, -4 -2, -4 -4 v-4 c0 -2, 2 -4, 4 -4z"
+            fill="url(#metallicBase)"
+          />
           {/* Bottom contact terminal */}
           <path d="M59 153 h22 l-4 8 h-14z" fill="oklch(0.2 0.01 256)" />
         </g>

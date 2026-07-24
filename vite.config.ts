@@ -38,7 +38,8 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }) => url.origin === self.location.origin && /\.(?:js|css|woff2)$/.test(url.pathname),
+              urlPattern: ({ url }) =>
+                url.origin === self.location.origin && /\.(?:js|css|woff2)$/.test(url.pathname),
               handler: "CacheFirst",
               options: {
                 cacheName: "sw-static",
@@ -46,7 +47,9 @@ export default defineConfig({
               },
             },
             {
-              urlPattern: ({ url }) => url.origin === self.location.origin && /\.(?:png|jpg|jpeg|webp|svg|ico)$/.test(url.pathname),
+              urlPattern: ({ url }) =>
+                url.origin === self.location.origin &&
+                /\.(?:png|jpg|jpeg|webp|svg|ico)$/.test(url.pathname),
               handler: "CacheFirst",
               options: {
                 cacheName: "sw-images",
