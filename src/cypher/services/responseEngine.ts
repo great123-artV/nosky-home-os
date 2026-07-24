@@ -87,7 +87,9 @@ export const responseEngine = {
       }
 
       case "GET_DEVICE_STATUS": {
-        const statusStr = context.deviceOnline ? "Your device is online." : "Your device is offline.";
+        const statusStr = context.deviceOnline
+          ? "Your device is online."
+          : "Your device is offline.";
         return {
           spokenText: statusStr,
           uiText: `Controller node is ${context.deviceOnline ? "ONLINE" : "OFFLINE"}.`,
@@ -97,19 +99,22 @@ export const responseEngine = {
       case "GUIDE_SIGNIN":
         return {
           spokenText: "Please sign in.",
-          uiText: "Hardware control requires a verified session. Enter your credentials on the Home page to authenticate.",
+          uiText:
+            "Hardware control requires a verified session. Enter your credentials on the Home page to authenticate.",
         };
 
       case "HELP":
         return {
           spokenText: "I can control your bulb, show status, or answer questions.",
-          uiText: "Try saying:\n• 'Turn on the bulb'\n• 'Is the device online?'\n• 'What is SMART WATT?'\n• 'Open settings'",
+          uiText:
+            "Try saying:\n• 'Turn on the bulb'\n• 'Is the device online?'\n• 'What is SMART WATT?'\n• 'Open settings'",
         };
 
       case "CONVERSATION":
         return {
           spokenText: "Welcome back. Your SMART WATT system is ready.",
-          uiText: "Welcome back! I'm Cypher, your SMART WATT operating voice assistant. Ready for your instructions.",
+          uiText:
+            "Welcome back! I'm Cypher, your SMART WATT operating voice assistant. Ready for your instructions.",
         };
 
       case "UNKNOWN_HARDWARE":

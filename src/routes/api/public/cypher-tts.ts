@@ -16,7 +16,7 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
             voiceId,
             modelId,
           }),
-          { status: 200, headers: { "content-type": "application/json" } }
+          { status: 200, headers: { "content-type": "application/json" } },
         );
       },
       POST: async ({ request }) => {
@@ -35,10 +35,16 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
         let voiceId = defaultVoiceId;
         let modelId = defaultModelId;
         try {
-          const body = (await request.json()) as { text?: unknown; voiceId?: unknown; modelId?: unknown };
+          const body = (await request.json()) as {
+            text?: unknown;
+            voiceId?: unknown;
+            modelId?: unknown;
+          };
           if (typeof body?.text === "string") text = body.text.trim();
-          if (typeof body?.voiceId === "string" && body.voiceId.trim()) voiceId = body.voiceId.trim();
-          if (typeof body?.modelId === "string" && body.modelId.trim()) modelId = body.modelId.trim();
+          if (typeof body?.voiceId === "string" && body.voiceId.trim())
+            voiceId = body.voiceId.trim();
+          if (typeof body?.modelId === "string" && body.modelId.trim())
+            modelId = body.modelId.trim();
         } catch {
           /* noop */
         }
@@ -77,10 +83,10 @@ export const Route = createFileRoute("/api/public/cypher-tts")({
           if (!upstream.ok) {
             const detail = await upstream.text().catch(() => "");
             console.error("[cypher-tts] ElevenLabs error", upstream.status, detail);
-            return new Response(
-              JSON.stringify({ error: `ElevenLabs error ${upstream.status}` }),
-              { status: 502, headers: { "content-type": "application/json" } },
-            );
+            return new Response(JSON.stringify({ error: `ElevenLabs error ${upstream.status}` }), {
+              status: 502,
+              headers: { "content-type": "application/json" },
+            });
           }
 
           const audio = await upstream.arrayBuffer();

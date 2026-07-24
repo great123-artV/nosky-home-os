@@ -21,13 +21,48 @@ interface HomeOnboardingProps {
 
 // Home types metadata
 const HOME_TYPES = [
-  { id: "house", label: "House", icon: HomeIcon, color: "from-blue-500/20 to-indigo-500/10 text-blue-400" },
-  { id: "apartment", label: "Apartment", icon: Building2, color: "from-purple-500/20 to-pink-500/10 text-purple-400" },
-  { id: "office", label: "Office", icon: Briefcase, color: "from-amber-500/20 to-orange-500/10 text-amber-400" },
-  { id: "shop", label: "Shop", icon: Store, color: "from-emerald-500/20 to-teal-500/10 text-emerald-400" },
-  { id: "hostel", label: "Hostel", icon: Bed, color: "from-cyan-500/20 to-blue-500/10 text-cyan-400" },
-  { id: "factory", label: "Factory", icon: Factory, color: "from-rose-500/20 to-red-500/10 text-rose-400" },
-  { id: "other", label: "Other", icon: MapPin, color: "from-gray-500/20 to-slate-500/10 text-gray-400" },
+  {
+    id: "house",
+    label: "House",
+    icon: HomeIcon,
+    color: "from-blue-500/20 to-indigo-500/10 text-blue-400",
+  },
+  {
+    id: "apartment",
+    label: "Apartment",
+    icon: Building2,
+    color: "from-purple-500/20 to-pink-500/10 text-purple-400",
+  },
+  {
+    id: "office",
+    label: "Office",
+    icon: Briefcase,
+    color: "from-amber-500/20 to-orange-500/10 text-amber-400",
+  },
+  {
+    id: "shop",
+    label: "Shop",
+    icon: Store,
+    color: "from-emerald-500/20 to-teal-500/10 text-emerald-400",
+  },
+  {
+    id: "hostel",
+    label: "Hostel",
+    icon: Bed,
+    color: "from-cyan-500/20 to-blue-500/10 text-cyan-400",
+  },
+  {
+    id: "factory",
+    label: "Factory",
+    icon: Factory,
+    color: "from-rose-500/20 to-red-500/10 text-rose-400",
+  },
+  {
+    id: "other",
+    label: "Other",
+    icon: MapPin,
+    color: "from-gray-500/20 to-slate-500/10 text-gray-400",
+  },
 ];
 
 export function HomeOnboarding({ onCreateHome, loading }: HomeOnboardingProps) {
@@ -69,7 +104,10 @@ export function HomeOnboarding({ onCreateHome, loading }: HomeOnboardingProps) {
             transition={{ type: "spring", stiffness: 300, damping: 20 }}
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl border border-primary/20 bg-gradient-to-b from-primary/15 to-primary/5 text-primary shadow-[0_0_20px_rgba(59,130,246,0.2)]"
           >
-            <HomeIcon className="h-6 w-6 filter drop-shadow-[0_0_4px_rgba(59,130,246,0.4)]" strokeWidth={2} />
+            <HomeIcon
+              className="h-6 w-6 filter drop-shadow-[0_0_4px_rgba(59,130,246,0.4)]"
+              strokeWidth={2}
+            />
           </motion.div>
 
           <h1 className="font-display text-2xl font-extrabold text-foreground tracking-tight sm:text-3xl">
@@ -137,7 +175,7 @@ export function HomeOnboarding({ onCreateHome, loading }: HomeOnboardingProps) {
                         "group flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all duration-300 select-none",
                         isSelected
                           ? "border-primary bg-primary/10 text-foreground shadow-[0_0_20px_rgba(59,130,246,0.15)] scale-[1.02]"
-                          : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03] text-muted-foreground/80 hover:text-foreground active:scale-[0.98]"
+                          : "border-white/[0.06] bg-white/[0.01] hover:border-white/[0.12] hover:bg-white/[0.03] text-muted-foreground/80 hover:text-foreground active:scale-[0.98]",
                       )}
                     >
                       <div
@@ -145,10 +183,17 @@ export function HomeOnboarding({ onCreateHome, loading }: HomeOnboardingProps) {
                           "grid h-10 w-10 place-items-center rounded-xl border bg-gradient-to-b transition-all duration-300 mb-2",
                           isSelected
                             ? "border-primary/30 text-primary bg-primary/15"
-                            : "border-white/[0.06] bg-white/[0.02]"
+                            : "border-white/[0.06] bg-white/[0.02]",
                         )}
                       >
-                        <IconComponent className={cn("h-5 w-5", isSelected ? "filter drop-shadow-[0_0_4px_rgba(59,130,246,0.5)]" : "text-muted-foreground/60 group-hover:text-foreground")} />
+                        <IconComponent
+                          className={cn(
+                            "h-5 w-5",
+                            isSelected
+                              ? "filter drop-shadow-[0_0_4px_rgba(59,130,246,0.5)]"
+                              : "text-muted-foreground/60 group-hover:text-foreground",
+                          )}
+                        />
                       </div>
                       <span className="text-xs font-bold tracking-wide">{type.label}</span>
                     </button>

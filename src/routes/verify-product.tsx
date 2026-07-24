@@ -10,7 +10,7 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
-  HelpCircle
+  HelpCircle,
 } from "lucide-react";
 import { Html5Qrcode } from "html5-qrcode";
 import { supabase } from "@/lib/supabase";
@@ -101,7 +101,7 @@ function VerifyProductScreen() {
           },
           (errorMessage) => {
             // Noise/Scanning error - ignore to prevent spamming logs
-          }
+          },
         );
       } catch (err: any) {
         console.error("Camera access failed", err);
@@ -197,16 +197,16 @@ function VerifyProductScreen() {
       // Successful verification
       setStatus("success");
 
-      // Store in sessionStorage
+      // Store in sessionStorage as structured NoskyOnboardingSession
       sessionStorage.setItem(
         "nosky_onboarding",
         JSON.stringify({
-          onboardingToken: result.onboarding_token,
+          token: result.onboarding_token,
           productUid: productUid.trim().toUpperCase(),
-          productType: result.product_type,
-          model: result.model,
+          productType: result.product_type || undefined,
+          model: result.model || undefined,
           expiresAt: result.expires_at,
-        })
+        }),
       );
 
       // Authenticated flow
@@ -216,7 +216,7 @@ function VerifyProductScreen() {
           "claim_verified_product",
           {
             onboarding_token: result.onboarding_token,
-          }
+          },
         );
 
         if (claimError) {
@@ -232,6 +232,8 @@ function VerifyProductScreen() {
             navigate({ to: "/ecosystem" });
           }, 1500);
         } else {
+          // Permanently failed (expired/used/invalid etc.) -> clear token
+          sessionStorage.removeItem("nosky_onboarding");
           setErrorMsg(claimResult?.message || "Failed to claim product.");
           setStatus("error");
         }
@@ -241,7 +243,6 @@ function VerifyProductScreen() {
           navigate({ to: "/sign-in" });
         }, 1200);
       }
-
     } catch (err: any) {
       console.error("Verification error:", err);
       setErrorMsg("We couldn’t verify this product right now. Please try again.");
@@ -299,7 +300,8 @@ function VerifyProductScreen() {
           </h1>
 
           <p className="mt-2 text-xs text-muted-foreground leading-relaxed text-center">
-            Scan the QR code on your product or enter the details manually to securely bind it to your account.
+            Scan the QR code on your product or enter the details manually to securely bind it to
+            your account.
           </p>
 
           {/* Form / Operations */}
@@ -370,7 +372,9 @@ function VerifyProductScreen() {
 
               <button
                 type="submit"
-                disabled={status === "verifying" || status === "claiming" || !productUid || !activationCode}
+                disabled={
+                  status === "verifying" || status === "claiming" || !productUid || !activationCode
+                }
                 className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary text-xs font-bold tracking-wide text-primary-foreground transition-all hover:scale-[1.01] hover:shadow-[0_0_20px_rgba(59,130,246,0.3)] disabled:opacity-50"
               >
                 {status === "verifying" || status === "claiming" ? (
@@ -401,7 +405,9 @@ function VerifyProductScreen() {
               <div className="w-full flex items-center justify-between mb-8">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Camera className="h-4 w-4 text-primary animate-pulse" />
-                  <span className="text-xs uppercase tracking-widest font-bold">NoskyTech Lens</span>
+                  <span className="text-xs uppercase tracking-widest font-bold">
+                    NoskyTech Lens
+                  </span>
                 </div>
                 <button
                   onClick={handleCloseScanner}
@@ -413,7 +419,6 @@ function VerifyProductScreen() {
 
               {/* Scan target container with framing */}
               <div className="relative w-72 h-72 rounded-3xl overflow-hidden border border-white/[0.08] shadow-card bg-black flex items-center justify-center">
-
                 {/* HTML5 QR reader element inside */}
                 <div id={qrRegionId} className="absolute inset-0 w-full h-full" />
 

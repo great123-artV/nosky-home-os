@@ -63,7 +63,8 @@ export const deviceControlEngine = {
         success: false,
         state: "failed",
         error: "NetworkOffline",
-        responseMessage: "Your smartphone is currently offline. Please check your internet connection.",
+        responseMessage:
+          "Your smartphone is currently offline. Please check your internet connection.",
       };
     }
 
@@ -73,7 +74,8 @@ export const deviceControlEngine = {
         success: false,
         state: "failed",
         error: "RealtimeDisconnected",
-        responseMessage: "I'm connected to your account, but live device confirmation is unavailable right now.",
+        responseMessage:
+          "I'm connected to your account, but live device confirmation is unavailable right now.",
       };
     }
 
@@ -94,13 +96,20 @@ export const deviceControlEngine = {
       const start = Date.now();
       const timeoutMs = isSim ? sessionContext.simulationState.delayMs + 1000 : 12000;
 
+      // Get the transport name that successfully processed the request
+      const activeTransport = isSim ? "simulation" : sessionContext.connectionMode || "cloud";
+      let transportName = "Cloud";
+      if (activeTransport === "local-wifi") transportName = "Local Wi-Fi";
+      else if (activeTransport === "bluetooth") transportName = "Bluetooth";
+      else if (activeTransport === "simulation") transportName = "Simulation Mode";
+
       while (Date.now() - start < timeoutMs) {
         // Query current state directly from live context
         if (sessionContext.actualState === nextState) {
           return {
             success: true,
             state: "confirmed",
-            responseMessage: `The bulb has been turned ${nextState ? "on" : "off"} successfully.`,
+            responseMessage: `Smart Bulb turned ${nextState ? "on" : "off"} through ${transportName}.`,
           };
         }
 
@@ -113,7 +122,7 @@ export const deviceControlEngine = {
         return {
           success: true,
           state: "confirmed",
-          responseMessage: `The bulb has been turned ${nextState ? "on" : "off"} successfully.`,
+          responseMessage: `Smart Bulb turned ${nextState ? "on" : "off"} through ${transportName}.`,
         };
       }
 
